@@ -1,5 +1,6 @@
 import {
   addItem,
+  formatQuantity,
   isMonthKey,
   lastItemNamed,
   monthName,
@@ -13,9 +14,11 @@ import {
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ScrollView, StyleSheet, TextInput, View } from "react-native";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { KeyboardAwareScrollView, KeyboardController, KeyboardStickyView } from "react-native-keyboard-controller";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition } from "react-native-reanimated";
-import { Button, IconButton } from "@/components/Button";
+import { BUTTON_RADIUS, Button, IconButton } from "@/components/Button";
+import { FabMorph } from "@/components/FabMorph";
 import { GroupSheet } from "@/components/GroupSheet";
 import { GroupValue, MonthValue, OptionRow, OptionTable, Stepper } from "@/components/ItemOptions";
 import { MonthSheet } from "@/components/MonthSheet";
@@ -25,16 +28,26 @@ import { Tap, haptic } from "@/components/Tap";
 import { Text } from "@/components/Text";
 import { UnitSheet, UnitSuggestions } from "@/components/UnitPicker";
 import { useCurrentMonth, useHousehold, useStoreQuery } from "@/data/HouseholdProvider";
+import { usePrefs } from "@/data/prefs";
 import { useSession } from "@/data/session";
 import { goBack } from "@/lib/navigation";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS } from "@/theme/tokens";
+import { SquircleFill } from "@/components/Squircle";
 
 const UsualChip = ({ usual, onPress }: { usual: Usual; onPress: () => void }) => {
   const { colors } = useTheme();
-  const quantity = [usual.qty, usual.unit].filter(Boolean).join(" ");
+  const { showUnits } = usePrefs();
+  const quantity = formatQuantity({ qty: usual.qty, unit: showUnits ? usual.unit : undefined });
   return (
-    <Tap accessibilityRole="button" accessibilityLabel={`Use ${usual.name}`} feedback="select" pressScale={0.94} onPress={onPress} style={[styles.usual, { backgroundColor: colors.surface2 }]}>
+    <Tap
+      accessibilityRole="button"
+      accessibilityLabel={`Use ${usual.name}`}
+      feedback="select"
+      pressScale={0.94}
+      onPress={onPress}
+      style={[styles.usual, { backgroundColor: colors.surface2 }]}
+    >
       <Text variant="secondary" style={{ fontFamily: FONTS.bodyMedium }}>
         {usual.name}
       </Text>
@@ -47,8 +60,12 @@ const UsualChip = ({ usual, onPress }: { usual: Usual; onPress: () => void }) =>
   );
 };
 
+/** When to check the keyboard came up after opening, and ask again if it didn't. */
+const KEYBOARD_RETRY_MS = [250, 600];
+
 export default function AddItem() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const household = useHousehold();
   const { userId } = useSession();
   const current = useCurrentMonth();
@@ -65,6 +82,23 @@ export default function AddItem() {
   const groupSheet = useRef<SheetRef>(null);
   const monthSheet = useRef<SheetRef>(null);
   const unitSheet = useRef<SheetRef>(null);
+  const { showUnits } = usePrefs();
+  const addLabel = `Add to ${monthName(month)}`;
+  const stickyOffset = { closed: 0, opened: insets.bottom };
+
+  // The name field autoFocuses so the keyboard rises while the screen grows out of the + button. Android
+  // sometimes drops that first keyboard request while the new screen's window is still taking focus, so ask
+  // again until it's up.
+  useEffect(() => {
+    const retries = KEYBOARD_RETRY_MS.map((delay) =>
+      setTimeout(() => {
+        if (KeyboardController.isVisible()) return;
+        nameRef.current?.blur();
+        nameRef.current?.focus();
+      }, delay),
+    );
+    return () => retries.forEach(clearTimeout);
+  }, []);
 
   const chips = useStoreQuery((store) => usuals({ store, month, query: name, limit: 8 }), [month, name]);
   const unitHints = useStoreQuery((store) => suggestUnits({ store, name }), [name]);
@@ -97,7 +131,12 @@ export default function AddItem() {
         store,
         month,
         userId,
-        item: { name: trimmed, qty: qty === undefined ? undefined : String(qty), unit, groupId: group && !group.deletedAt ? groupId : undefined },
+        item: {
+          name: trimmed,
+          qty: qty === undefined ? undefined : String(qty),
+          unit: showUnits ? unit : undefined,
+          groupId: group && !group.deletedAt ? groupId : undefined,
+        },
       }),
     );
     haptic("success");
@@ -126,116 +165,139 @@ export default function AddItem() {
   };
 
   return (
-    <Screen>
-      <KeyboardAvoidingView behavior="padding" style={styles.flex}>
-        <View style={styles.nav}>
-          <IconButton icon="arrow-left" label="Back" onPress={() => goBack()} />
-          <Text variant="title">Add item</Text>
-          <View style={styles.navSpacer} />
-        </View>
+    <FabMorph label={addLabel} labelDimmed={!name.trim()} radius={BUTTON_RADIUS} stickyOffset={stickyOffset}>
+      {(morphTarget) => (
+        <Screen>
+          <View style={styles.flex}>
+            <View style={styles.nav}>
+              <IconButton icon="arrow-left" label="Back" onPress={() => goBack()} />
+              <Text variant="title">Add item</Text>
+              <View style={styles.navSpacer} />
+            </View>
 
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Tap accessibilityRole="none" pressScale={1} onPress={() => nameRef.current?.focus()} style={[styles.hero, { backgroundColor: colors.accentSoft }]}>
-            <Text variant="label" color="accent">
-              Item name
-            </Text>
-            <TextInput
-              ref={nameRef}
-              autoFocus
-              value={name}
-              onChangeText={setName}
-              placeholder="What do you need?"
-              placeholderTextColor={colors.ink3}
-              selectionColor={colors.accent}
-              cursorColor={colors.accent}
-              returnKeyType="done"
-              submitBehavior="submit"
-              onSubmitEditing={() => add({ andClose: false })}
-              autoCapitalize="sentences"
-              style={[styles.heroInput, { color: colors.ink }]}
-            />
-            {justAdded ? (
-              <Animated.View entering={FadeInDown.duration(160)} exiting={FadeOut} style={styles.added}>
-                <Text variant="caption" color="accent">
-                  Added {justAdded} to {monthShortName(month)} ✓
+            <KeyboardAwareScrollView bottomOffset={FOOTER_SPACE} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+              <Tap accessibilityRole="none" pressScale={1} onPress={() => nameRef.current?.focus()} style={styles.hero}>
+                <SquircleFill radius={20} color={colors.accentSoft} />
+                <Text variant="label" color="accent">
+                  Item name
                 </Text>
-              </Animated.View>
-            ) : null}
-          </Tap>
+                <TextInput
+                  ref={nameRef}
+                  autoFocus
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="e.g. Tomatoes"
+                  numberOfLines={1}
+                  placeholderTextColor={colors.ink3}
+                  selectionColor={colors.accent}
+                  cursorColor={colors.accent}
+                  returnKeyType="done"
+                  submitBehavior="submit"
+                  onSubmitEditing={() => add({ andClose: false })}
+                  autoCapitalize="sentences"
+                  style={[styles.heroInput, { color: colors.ink }]}
+                />
+                {justAdded ? (
+                  <Animated.View entering={FadeInDown.duration(160)} exiting={FadeOut} style={styles.added}>
+                    <Text variant="caption" color="accent">
+                      Added {justAdded} to {monthShortName(month)} ✓
+                    </Text>
+                  </Animated.View>
+                ) : null}
+              </Tap>
 
-          {chips.length > 0 ? (
-            <Animated.View entering={FadeIn} layout={LinearTransition} style={styles.usuals}>
-              <Text variant="label" color="ink2">
-                Your usuals
-              </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="always" contentContainerStyle={styles.usualRow}>
-                {chips.map((usual) => (
-                  <UsualChip key={usual.name} usual={usual} onPress={() => useUsual(usual)} />
-                ))}
-              </ScrollView>
-            </Animated.View>
+              {chips.length > 0 ? (
+                <Animated.View entering={FadeIn} layout={LinearTransition} style={styles.usuals}>
+                  <Text variant="label" color="ink2">
+                    Your usuals
+                  </Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    keyboardShouldPersistTaps="always"
+                    contentContainerStyle={styles.usualRow}
+                  >
+                    {chips.map((usual) => (
+                      <UsualChip key={usual.name} usual={usual} onPress={() => useUsual(usual)} />
+                    ))}
+                  </ScrollView>
+                </Animated.View>
+              ) : null}
+
+              <OptionTable>
+                <OptionRow label="Quantity">
+                  <Stepper value={qty} onChange={setQty} />
+                </OptionRow>
+                {showUnits ? (
+                  <OptionRow label="Unit" hint="optional">
+                    <UnitSuggestions
+                      suggestions={unitHints.suggestions}
+                      selected={unit}
+                      onSelect={(next) => {
+                        setUnit(next);
+                        setUnitTouched(true);
+                      }}
+                      onMore={() => unitSheet.current?.present()}
+                    />
+                  </OptionRow>
+                ) : null}
+                <OptionRow label="Group">
+                  <GroupValue group={group && !group.deletedAt ? group : undefined} onPress={() => groupSheet.current?.present()} />
+                </OptionRow>
+                <OptionRow label="List">
+                  <MonthValue month={month} onPress={() => monthSheet.current?.present()} />
+                </OptionRow>
+              </OptionTable>
+            </KeyboardAwareScrollView>
+
+            {/* Pinned to the top of the keyboard while it's open, so Add is always reachable. */}
+            <KeyboardStickyView offset={stickyOffset} style={[styles.footer, { backgroundColor: colors.bg }]}>
+              {/* The list's + morphs into this button; it shows once the morph lands on it. */}
+              <View ref={morphTarget.ref} onLayout={morphTarget.onLayout} collapsable={false} style={morphTarget.visible ? null : styles.hidden}>
+                <Button label={addLabel} onPress={() => add({ andClose: true })} disabled={!name.trim()} />
+              </View>
+            </KeyboardStickyView>
+          </View>
+
+          <GroupSheet
+            ref={groupSheet}
+            selectedId={groupId}
+            onSelect={(next) => {
+              setGroupId(next);
+              setGroupTouched(true);
+            }}
+          />
+          <MonthSheet ref={monthSheet} current={current} selected={month} onSelect={setMonth} />
+          {showUnits ? (
+            <UnitSheet
+              ref={unitSheet}
+              selected={unit}
+              onSelect={(next) => {
+                setUnit(next);
+                setUnitTouched(true);
+              }}
+            />
           ) : null}
-
-          <OptionTable>
-            <OptionRow label="Quantity">
-              <Stepper value={qty} onChange={setQty} />
-            </OptionRow>
-            <OptionRow label="Unit" hint="optional">
-              <UnitSuggestions
-                suggestions={unitHints.suggestions}
-                selected={unit}
-                onSelect={(next) => {
-                  setUnit(next);
-                  setUnitTouched(true);
-                }}
-                onMore={() => unitSheet.current?.present()}
-              />
-            </OptionRow>
-            <OptionRow label="Group">
-              <GroupValue group={group && !group.deletedAt ? group : undefined} onPress={() => groupSheet.current?.present()} />
-            </OptionRow>
-            <OptionRow label="List">
-              <MonthValue month={month} onPress={() => monthSheet.current?.present()} />
-            </OptionRow>
-          </OptionTable>
-        </ScrollView>
-
-        <View style={styles.footer}>
-          <Button label={`Add to ${monthName(month)}`} onPress={() => add({ andClose: true })} disabled={!name.trim()} />
-        </View>
-      </KeyboardAvoidingView>
-
-      <GroupSheet
-        ref={groupSheet}
-        selectedId={groupId}
-        onSelect={(next) => {
-          setGroupId(next);
-          setGroupTouched(true);
-        }}
-      />
-      <MonthSheet ref={monthSheet} current={current} selected={month} onSelect={setMonth} />
-      <UnitSheet
-        ref={unitSheet}
-        selected={unit}
-        onSelect={(next) => {
-          setUnit(next);
-          setUnitTouched(true);
-        }}
-      />
-    </Screen>
+        </Screen>
+      )}
+    </FabMorph>
   );
 }
+
+/** Room kept under the last form row so it never ends up behind the pinned button. */
+const FOOTER_SPACE = 88;
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   nav: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 4 },
   navSpacer: { width: 44 },
   content: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 24, gap: 18 },
-  hero: { borderRadius: 20, paddingHorizontal: 20, paddingVertical: 16, gap: 2 },
+  hero: { paddingHorizontal: 20, paddingVertical: 16, gap: 2 },
   heroInput: { fontFamily: FONTS.displayBold, fontSize: 36, lineHeight: 44, minHeight: 48, padding: 0, outlineWidth: 0 },
   added: { paddingTop: 4 },
   usuals: { gap: 10 },
   usualRow: { gap: 8, paddingRight: 20 },
   usual: { height: 42, borderRadius: 21, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 6 },
   footer: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
+  hidden: { opacity: 0 },
 });

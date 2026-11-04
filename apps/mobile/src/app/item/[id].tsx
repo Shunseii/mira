@@ -1,15 +1,14 @@
 import {
-  carriedSince,
   deleteItem,
-  monthKeyOf,
   monthName,
   moveItemToMonth,
   readGroup,
   readItem,
   readUser,
-  setChecked,
   suggestUnits,
   updateItem,
+  type Item,
+  type MonthKey,
 } from "@mira/shared";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -27,33 +26,46 @@ import { Tap, haptic } from "@/components/Tap";
 import { Text } from "@/components/Text";
 import { UnitSheet, UnitSuggestions } from "@/components/UnitPicker";
 import { useCurrentMonth, useHousehold, useStoreQuery } from "@/data/HouseholdProvider";
-import { useSession } from "@/data/session";
+import { usePrefs } from "@/data/prefs";
 import { goBack } from "@/lib/navigation";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS } from "@/theme/tokens";
+import { SquircleFill } from "@/components/Squircle";
 
 const formatDay = (at: number): string => new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long" }).format(at);
+
+type Draft = { name: string; qty?: number; unit?: string; groupId?: string; month: MonthKey; note: string };
+
+const draftOf = (item: Item): Draft => ({
+  name: item.name,
+  qty: parseQuantity(item.qty),
+  unit: item.unit,
+  groupId: item.groupId,
+  month: item.listId,
+  note: item.note ?? "",
+});
 
 export default function ItemDetail() {
   const { colors } = useTheme();
   const household = useHousehold();
-  const { userId } = useSession();
   const current = useCurrentMonth();
   const { id } = useLocalSearchParams<{ id: string }>();
   const item = useStoreQuery((store) => readItem({ store, id }), [id]);
-  const group = useStoreQuery((store) => (item?.groupId ? readGroup({ store, id: item.groupId }) : undefined), [item?.groupId]);
+  // Edits stay in this draft until Save; Back discards them.
+  const [draft, setDraft] = useState<Draft | undefined>(() => (item ? draftOf(item) : undefined));
+  useEffect(() => {
+    if (!draft && item) setDraft(draftOf(item));
+  }, [draft, item]);
+  const patchDraft = (patch: Partial<Draft>) => setDraft((previous) => (previous ? { ...previous, ...patch } : previous));
+  const group = useStoreQuery((store) => (draft?.groupId ? readGroup({ store, id: draft.groupId }) : undefined), [draft?.groupId]);
   const addedBy = useStoreQuery((store) => (item ? readUser({ store, id: item.addedBy }) : undefined), [item?.addedBy]);
-  const unitHints = useStoreQuery((store) => suggestUnits({ store, name: item?.name ?? "" }), [item?.name]);
-  const [name, setName] = useState(item?.name ?? "");
-  const [note, setNote] = useState(item?.note ?? "");
+  const unitHints = useStoreQuery((store) => suggestUnits({ store, name: draft?.name ?? "" }), [draft?.name]);
   const groupSheet = useRef<SheetRef>(null);
   const monthSheet = useRef<SheetRef>(null);
   const unitSheet = useRef<SheetRef>(null);
+  const { showUnits } = usePrefs();
 
-  useEffect(() => setName(item?.name ?? ""), [item?.name]);
-  useEffect(() => setNote(item?.note ?? ""), [item?.note]);
-
-  if (!item || item.deletedAt !== undefined) {
+  if (!item || item.deletedAt !== undefined || !draft) {
     return (
       <Screen style={styles.missing}>
         <Text variant="title">This item is gone</Text>
@@ -63,10 +75,26 @@ export default function ItemDetail() {
   }
 
   const liveGroup = group && group.deletedAt === undefined ? group : undefined;
-  const since = carriedSince({ item, month: item.listId });
-  const checked = item.checkedAt !== undefined;
-  const commitName = () => name.trim() && name.trim() !== item.name && household.write((store) => updateItem({ store, itemId: item.id, patch: { name } }));
-  const commitNote = () => note.trim() !== (item.note ?? "") && household.write((store) => updateItem({ store, itemId: item.id, patch: { note } }));
+  const save = () => {
+    if (!draft.name.trim()) return;
+    household.write((store) => {
+      updateItem({
+        store,
+        itemId: item.id,
+        patch: {
+          name: draft.name,
+          qty: draft.qty === undefined ? null : String(draft.qty),
+          // With units hidden, leave the stored unit alone so it's still there when they're turned back on.
+          unit: showUnits ? (draft.unit ?? null) : undefined,
+          groupId: draft.groupId ?? null,
+          note: draft.note,
+        },
+      });
+      if (draft.month !== item.listId) moveItemToMonth({ store, itemId: item.id, month: draft.month });
+    });
+    haptic("success");
+    goBack();
+  };
 
   return (
     <Screen>
@@ -101,44 +129,35 @@ export default function ItemDetail() {
             ) : null}
             <View style={styles.titleRow}>
               <TextInput
-                value={name}
-                onChangeText={setName}
-                onBlur={commitName}
-                onSubmitEditing={commitName}
+                value={draft.name}
+                onChangeText={(text) => patchDraft({ name: text })}
                 returnKeyType="done"
+                accessibilityLabel="Item name"
                 selectionColor={colors.accent}
                 style={[styles.titleInput, { color: colors.ink }]}
               />
-              {since ? (
-                <View style={[styles.tag, { backgroundColor: colors.surface2 }]}>
-                  <Text variant="tag" color="ink2">
-                    since {since}
-                  </Text>
-                </View>
-              ) : null}
             </View>
           </View>
 
           <OptionTable>
             <OptionRow label="Quantity">
-              <Stepper
-                value={parseQuantity(item.qty)}
-                onChange={(next) => household.write((store) => updateItem({ store, itemId: item.id, patch: { qty: next === undefined ? null : String(next) } }))}
-              />
+              <Stepper value={draft.qty} onChange={(next) => patchDraft({ qty: next })} />
             </OptionRow>
-            <OptionRow label="Unit" hint="optional">
-              <UnitSuggestions
-                suggestions={unitHints.suggestions}
-                selected={item.unit}
-                onSelect={(unit) => household.write((store) => updateItem({ store, itemId: item.id, patch: { unit: unit ?? null } }))}
-                onMore={() => unitSheet.current?.present()}
-              />
-            </OptionRow>
+            {showUnits ? (
+              <OptionRow label="Unit" hint="optional">
+                <UnitSuggestions
+                  suggestions={unitHints.suggestions}
+                  selected={draft.unit}
+                  onSelect={(unit) => patchDraft({ unit })}
+                  onMore={() => unitSheet.current?.present()}
+                />
+              </OptionRow>
+            ) : null}
             <OptionRow label="Group">
               <GroupValue group={liveGroup} onPress={() => groupSheet.current?.present()} />
             </OptionRow>
             <OptionRow label="List">
-              <MonthValue month={item.listId} onPress={() => monthSheet.current?.present()} />
+              <MonthValue month={draft.month} onPress={() => monthSheet.current?.present()} />
             </OptionRow>
           </OptionTable>
 
@@ -146,16 +165,18 @@ export default function ItemDetail() {
             <Text variant="label" color="ink2">
               Note
             </Text>
-            <TextInput
-              value={note}
-              onChangeText={setNote}
-              onBlur={commitNote}
-              multiline
-              placeholder="Brand, ripeness, anything that helps"
-              placeholderTextColor={colors.ink3}
-              selectionColor={colors.accent}
-              style={[styles.note, { color: colors.ink, backgroundColor: colors.surface, borderColor: colors.line }]}
-            />
+            <View>
+              <SquircleFill radius={14} color={colors.surface} stroke={{ color: colors.line, width: 1 }} />
+              <TextInput
+                value={draft.note}
+                onChangeText={(text) => patchDraft({ note: text })}
+                multiline
+                placeholder="Brand, ripeness, anything that helps"
+                placeholderTextColor={colors.ink3}
+                selectionColor={colors.accent}
+                style={[styles.note, { color: colors.ink }]}
+              />
+            </View>
           </View>
 
           <View style={styles.addedBy}>
@@ -164,29 +185,19 @@ export default function ItemDetail() {
               <Text variant="label">Added by {addedBy?.name ?? "someone"}</Text>
               <Text variant="caption" color="ink2">
                 {formatDay(item.addedAt)}
-                {since ? ` · carried over from ${monthName(monthKeyOf(new Date(item.addedAt)))}` : ""}
               </Text>
             </View>
           </View>
         </ScrollView>
 
         <View style={styles.footer}>
-          <Button
-            label={checked ? "Put back on the list" : "Mark as got"}
-            kind={checked ? "soft" : "primary"}
-            onPress={() => {
-              if (!userId) return;
-              haptic(checked ? "light" : "success");
-              household.write((store) => setChecked({ store, itemId: item.id, userId, checked: !checked }));
-              goBack();
-            }}
-          />
+          <Button label="Save" onPress={save} disabled={!draft.name.trim()} />
         </View>
       </KeyboardAvoidingView>
 
-      <GroupSheet ref={groupSheet} selectedId={liveGroup?.id} onSelect={(groupId) => household.write((store) => updateItem({ store, itemId: item.id, patch: { groupId: groupId ?? null } }))} />
-      <MonthSheet ref={monthSheet} current={current} selected={item.listId} onSelect={(month) => household.write((store) => moveItemToMonth({ store, itemId: item.id, month }))} />
-      <UnitSheet ref={unitSheet} selected={item.unit} onSelect={(unit) => household.write((store) => updateItem({ store, itemId: item.id, patch: { unit: unit ?? null } }))} />
+      <GroupSheet ref={groupSheet} selectedId={liveGroup?.id} onSelect={(groupId) => patchDraft({ groupId })} />
+      <MonthSheet ref={monthSheet} current={current} selected={draft.month} onSelect={(month) => patchDraft({ month })} />
+      {showUnits ? <UnitSheet ref={unitSheet} selected={draft.unit} onSelect={(unit) => patchDraft({ unit })} /> : null}
     </Screen>
   );
 }
@@ -202,9 +213,16 @@ const styles = StyleSheet.create({
   titleBlock: { gap: 4 },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   titleInput: { flexShrink: 1, fontFamily: FONTS.displayBold, fontSize: 30, lineHeight: 38, padding: 0, outlineWidth: 0 },
-  tag: { borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
   noteBlock: { gap: 8 },
-  note: { minHeight: 96, borderRadius: 14, borderWidth: 1, padding: 14, fontFamily: FONTS.body, fontSize: 16, lineHeight: 22, textAlignVertical: "top", outlineWidth: 0 },
+  note: {
+    minHeight: 96,
+    padding: 15,
+    fontFamily: FONTS.body,
+    fontSize: 16,
+    lineHeight: 22,
+    textAlignVertical: "top",
+    outlineWidth: 0,
+  },
   addedBy: { flexDirection: "row", alignItems: "center", gap: 12 },
   footer: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
 });

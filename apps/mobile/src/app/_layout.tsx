@@ -1,5 +1,5 @@
 import "@/lib/polyfills";
-import { Amiri_700Bold } from "@expo-google-fonts/amiri/700Bold";
+import { NotoNaskhArabic_700Bold } from "@expo-google-fonts/noto-naskh-arabic/700Bold";
 import { Fraunces_300Light } from "@expo-google-fonts/fraunces/300Light";
 import { Fraunces_500Medium } from "@expo-google-fonts/fraunces/500Medium";
 import { Fraunces_600SemiBold } from "@expo-google-fonts/fraunces/600SemiBold";
@@ -11,6 +11,7 @@ import { useFonts } from "expo-font";
 import * as QuickActions from "expo-quick-actions";
 import { useQuickActionRouting } from "expo-quick-actions/router";
 import { Stack } from "expo-router";
+import { GROUP_ICON_FONT } from "@/components/groupIconGlyphs";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
@@ -21,6 +22,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { HouseholdProvider, useOptionalHousehold } from "@/data/HouseholdProvider";
 import { loginStep, useSession } from "@/data/session";
+import { AppearanceTransitionProvider } from "@/theme/AppearanceTransition";
 import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
 
 void SplashScreen.preventAutoHideAsync();
@@ -60,7 +62,11 @@ const Navigation = () => {
         </Stack.Protected>
         <Stack.Protected guard={signedIn}>
           <Stack.Screen name="index" options={{ animation: "fade" }} />
-          <Stack.Screen name="add" options={{ animation: "slide_from_bottom", gestureDirection: "vertical" }} />
+          {/* The list's + button morphs into this screen's Add button (FabMorph), so no native animation. */}
+          <Stack.Screen
+            name="add"
+            options={{ presentation: "transparentModal", animation: "none", gestureEnabled: false, contentStyle: { backgroundColor: "transparent" } }}
+          />
           <Stack.Screen name="item/[id]" />
           <Stack.Screen name="settings" />
           <Stack.Screen name="groups/index" />
@@ -79,7 +85,8 @@ export default function RootLayout() {
     InstrumentSans_400Regular,
     InstrumentSans_500Medium,
     InstrumentSans_600SemiBold,
-    Amiri_700Bold,
+    NotoNaskhArabic_700Bold,
+    [GROUP_ICON_FONT]: require("../../assets/fonts/lucide-group-icons.ttf"),
   });
   if (!fontsLoaded && fontError === null) return null;
 
@@ -89,9 +96,11 @@ export default function RootLayout() {
         <KeyboardProvider>
           <ThemeProvider>
             <HouseholdProvider>
-              <BottomSheetModalProvider>
-                <Navigation />
-              </BottomSheetModalProvider>
+              <AppearanceTransitionProvider>
+                <BottomSheetModalProvider>
+                  <Navigation />
+                </BottomSheetModalProvider>
+              </AppearanceTransitionProvider>
             </HouseholdProvider>
           </ThemeProvider>
         </KeyboardProvider>

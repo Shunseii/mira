@@ -1,8 +1,11 @@
 import type { LucideIcon } from "lucide-react-native";
 import { GROUP_ICON_COMPONENTS } from "./groupIcons";
 import ArrowLeft from "lucide-react-native/icons/arrow-left";
+import ArrowDownUp from "lucide-react-native/icons/arrow-down-up";
+import ArrowUpDown from "lucide-react-native/icons/arrow-up-down";
 import Ban from "lucide-react-native/icons/ban";
 import Check from "lucide-react-native/icons/check";
+import CheckCheck from "lucide-react-native/icons/check-check";
 import ChevronLeft from "lucide-react-native/icons/chevron-left";
 import ChevronRight from "lucide-react-native/icons/chevron-right";
 import ChevronsUpDown from "lucide-react-native/icons/chevrons-up-down";
@@ -12,6 +15,8 @@ import CloudUpload from "lucide-react-native/icons/cloud-upload";
 import Eye from "lucide-react-native/icons/eye";
 import EyeOff from "lucide-react-native/icons/eye-off";
 import GripVertical from "lucide-react-native/icons/grip-vertical";
+import Layers from "lucide-react-native/icons/layers";
+import ListOrdered from "lucide-react-native/icons/list-ordered";
 import LockKeyhole from "lucide-react-native/icons/lock-keyhole";
 import LogOut from "lucide-react-native/icons/log-out";
 import Minus from "lucide-react-native/icons/minus";
@@ -25,13 +30,17 @@ import Tags from "lucide-react-native/icons/tags";
 import Trash2 from "lucide-react-native/icons/trash";
 import UserRoundPlus from "lucide-react-native/icons/user-round-plus";
 import UsersRound from "lucide-react-native/icons/users-round";
+import Undo2 from "lucide-react-native/icons/undo-2";
 import X from "lucide-react-native/icons/x";
 
 export const ICONS = {
   ...GROUP_ICON_COMPONENTS,
   "arrow-left": ArrowLeft,
+  "arrow-down-up": ArrowDownUp,
+  "arrow-up-down": ArrowUpDown,
   ban: Ban,
   check: Check,
+  "check-check": CheckCheck,
   "chevron-left": ChevronLeft,
   "chevron-right": ChevronRight,
   "chevrons-up-down": ChevronsUpDown,
@@ -41,6 +50,8 @@ export const ICONS = {
   eye: Eye,
   "eye-off": EyeOff,
   "grip-vertical": GripVertical,
+  layers: Layers,
+  "list-ordered": ListOrdered,
   "lock-keyhole": LockKeyhole,
   "log-out": LogOut,
   minus: Minus,
@@ -54,6 +65,7 @@ export const ICONS = {
   "trash-2": Trash2,
   "user-round-plus": UserRoundPlus,
   "users-round": UsersRound,
+  "undo-2": Undo2,
   x: X,
 } satisfies Record<string, LucideIcon>;
 

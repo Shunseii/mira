@@ -15,8 +15,8 @@ const VARIANTS = {
   caption: { fontFamily: FONTS.body, fontSize: 13, lineHeight: 17 },
   tag: { fontFamily: FONTS.bodyMedium, fontSize: 12, lineHeight: 15 },
   eyebrow: { fontFamily: FONTS.bodyBold, fontSize: 12, lineHeight: 15, letterSpacing: 1.4, textTransform: "uppercase" },
-  wordmark: { fontFamily: FONTS.arabic, fontSize: 30, lineHeight: 44, textAlign: "left", alignSelf: "flex-start" },
-  wordmarkHero: { fontFamily: FONTS.arabic, fontSize: 64, lineHeight: 96, textAlign: "left", alignSelf: "flex-start" },
+  wordmark: { fontFamily: FONTS.arabic, fontSize: 28, lineHeight: 48, textAlign: "left", alignSelf: "flex-start" },
+  wordmarkHero: { fontFamily: FONTS.arabic, fontSize: 60, lineHeight: 104, textAlign: "left", alignSelf: "flex-start" },
 } satisfies Record<string, TextStyle>;
 
 export type TextVariant = keyof typeof VARIANTS;

@@ -2,8 +2,13 @@ import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } f
 import { useTheme } from "@/theme/ThemeProvider";
 import { TAP } from "@/theme/tokens";
 import { Icon, type IconName } from "./Icon";
+import { SquircleFill } from "./Squircle";
 import { Tap } from "./Tap";
 import { Text } from "./Text";
+
+/** A disabled button keeps its solid fill and dims only its label (so the + can morph into it). */
+export const DISABLED_LABEL_OPACITY = 0.5;
+export const BUTTON_RADIUS = 16;
 
 type ButtonProps = {
   label: string;
@@ -26,13 +31,15 @@ export const Button = ({ label, onPress, kind = "primary", icon, busy, disabled,
       accessibilityLabel={label}
       onPress={onPress}
       disabled={disabled || busy}
+      dimWhenDisabled={false}
       feedback="light"
-      style={[styles.base, compact ? styles.compact : styles.full, { backgroundColor: background }, style]}
+      style={[styles.base, compact ? styles.compact : styles.full, style]}
     >
+      <SquircleFill radius={BUTTON_RADIUS} color={background} />
       {busy ? (
         <ActivityIndicator color={foreground} />
       ) : (
-        <View style={styles.row}>
+        <View style={[styles.row, disabled ? { opacity: DISABLED_LABEL_OPACITY } : null]}>
           {icon ? <Icon name={icon} size={18} color={foreground} /> : null}
           <Text variant="bodyStrong" style={{ color: foreground }}>
             {label}
@@ -74,7 +81,7 @@ export const IconButton = ({
 };
 
 const styles = StyleSheet.create({
-  base: { borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  base: { alignItems: "center", justifyContent: "center" },
   full: { height: TAP.button, alignSelf: "stretch" },
   compact: { height: 48, paddingHorizontal: 20 },
   row: { flexDirection: "row", alignItems: "center", gap: 8 },

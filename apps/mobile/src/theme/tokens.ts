@@ -26,6 +26,9 @@ export type Palette = {
   accentSoft: string;
   onAccent: string;
   danger: string;
+  /** Large destructive fills (the swipe-to-delete panel): calmer than `danger` text in dark mode. */
+  dangerFill: string;
+  onDangerFill: string;
   scrim: string;
 };
 
@@ -39,6 +42,8 @@ const LIGHT_BASE = {
   line: "#E2D9C9",
   onAccent: "#FFF8F1",
   danger: "#B4502B",
+  dangerFill: "#B4502B",
+  onDangerFill: "#FFF8F1",
   scrim: "rgba(34,30,25,0.35)",
 };
 
@@ -52,6 +57,8 @@ const DARK_BASE = {
   line: "#352E27",
   onAccent: "#FFF8F1",
   danger: "#E07A52",
+  dangerFill: "#6E3220",
+  onDangerFill: "#F6DCCD",
   scrim: "rgba(0,0,0,0.55)",
 };
 
@@ -92,7 +99,7 @@ export const FONTS = {
   body: "InstrumentSans_400Regular",
   bodyMedium: "InstrumentSans_500Medium",
   bodyBold: "InstrumentSans_600SemiBold",
-  arabic: "Amiri_700Bold",
+  arabic: "NotoNaskhArabic_700Bold",
 } as const;
 
 /** Minimum touch target; the design uses 44pt circles and 56pt rows/buttons. */

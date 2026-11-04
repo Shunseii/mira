@@ -9,6 +9,7 @@ import { Icon, type IconName } from "./Icon";
 import { Sheet, type SheetRef } from "./Sheet";
 import { Tap } from "./Tap";
 import { Text } from "./Text";
+import { SquircleFill } from "./Squircle";
 
 const UnitChip = ({ unit, selected, size, onPress }: { unit: string; selected: boolean; size: "small" | "large"; onPress: () => void }) => {
   const { colors } = useTheme();
@@ -92,9 +93,12 @@ export const UnitSheet = forwardRef<SheetRef, { selected: string | undefined; on
     const { colors } = useTheme();
     const yours = useStoreQuery((store) => customUnits({ store }), []);
     const [custom, setCustom] = useState("");
+    // Bumped to clear the custom field: it's uncontrolled (a controlled sheet input doubles text on Android).
+    const [customKey, setCustomKey] = useState(0);
     const choose = (unit: string | undefined) => {
       onSelect(unit);
       setCustom("");
+      setCustomKey((key) => key + 1);
       if (ref && typeof ref === "object") ref.current?.dismiss();
     };
     const chips = (units: readonly string[]) =>
@@ -134,9 +138,10 @@ export const UnitSheet = forwardRef<SheetRef, { selected: string | undefined; on
           <Text variant="caption" color="ink2" style={{ fontFamily: FONTS.bodyMedium }}>
             Something else?
           </Text>
-          <View style={[styles.customInput, { backgroundColor: colors.bg, borderColor: colors.line }]}>
+          <View style={styles.customInput}>
+            <SquircleFill radius={14} color={colors.bg} stroke={{ color: colors.line, width: 1 }} />
             <BottomSheetTextInput
-              value={custom}
+              key={customKey}
               onChangeText={setCustom}
               placeholder="Type a unit, e.g. jar"
               placeholderTextColor={colors.ink3}
@@ -145,12 +150,8 @@ export const UnitSheet = forwardRef<SheetRef, { selected: string | undefined; on
               onSubmitEditing={() => custom.trim() && choose(custom.trim())}
               style={[styles.customText, { color: colors.ink }]}
             />
-            <Tap
-              accessibilityRole="button"
-              disabled={!custom.trim()}
-              onPress={() => choose(custom.trim())}
-              style={[styles.customAdd, { backgroundColor: custom.trim() ? colors.accent : colors.surface2 }]}
-            >
+            <Tap accessibilityRole="button" disabled={!custom.trim()} onPress={() => choose(custom.trim())} style={styles.customAdd}>
+              <SquircleFill radius={10} color={custom.trim() ? colors.accent : colors.surface2} />
               <Text variant="bodyStrong" color={custom.trim() ? "onAccent" : "ink3"} style={{ fontSize: 15 }}>
                 Add
               </Text>
@@ -175,7 +176,7 @@ const styles = StyleSheet.create({
   sectionLabel: { flexDirection: "row", alignItems: "center", gap: 6 },
   wrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   customBlock: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 16, gap: 8 },
-  customInput: { height: 52, borderRadius: 14, borderWidth: 1, paddingLeft: 16, paddingRight: 6, flexDirection: "row", alignItems: "center", gap: 10 },
+  customInput: { height: 52, paddingLeft: 17, paddingRight: 7, flexDirection: "row", alignItems: "center", gap: 10 },
   customText: { flex: 1, fontFamily: FONTS.body, fontSize: 16, height: "100%" },
-  customAdd: { height: 40, borderRadius: 10, paddingHorizontal: 14, justifyContent: "center" },
+  customAdd: { height: 40, paddingHorizontal: 14, justifyContent: "center" },
 });

@@ -1,10 +1,9 @@
 import { monthName, monthYear, type MonthKey } from "@mira/shared";
 import { StyleSheet, View } from "react-native";
-import Animated, { FadeIn, FadeInDown, FadeInUp, FadeOut } from "react-native-reanimated";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { useHouseholdState } from "@/data/HouseholdProvider";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS } from "@/theme/tokens";
-import { IconButton } from "./Button";
 import { Icon } from "./Icon";
 import { Tap } from "./Tap";
 import { Text } from "./Text";
@@ -19,7 +18,9 @@ const SyncPill = ({ onPress }: { onPress: () => void }) => {
     <Animated.View entering={FadeIn} exiting={FadeOut}>
       <Tap
         accessibilityRole="button"
-        accessibilityLabel={unauthorized ? "Signed out by the server. Tap to sign in again" : `Offline, ${pending.length} changes waiting to sync. Tap to retry`}
+        accessibilityLabel={
+          unauthorized ? "Signed out by the server. Tap to sign in again" : `Offline, ${pending.length} changes waiting to sync. Tap to retry`
+        }
         onPress={onPress}
         style={[styles.pill, { backgroundColor: colors.surface2, borderColor: colors.line }]}
       >
@@ -35,61 +36,77 @@ const SyncPill = ({ onPress }: { onPress: () => void }) => {
   );
 };
 
-export const ListHeader = ({
-  month,
-  direction,
-  canGoBack,
-  canGoForward,
-  onPrevious,
-  onNext,
-  onSettings,
-  onSyncPill,
-}: {
-  month: MonthKey;
-  direction: 1 | -1;
-  canGoBack: boolean;
-  canGoForward: boolean;
-  onPrevious: () => void;
-  onNext: () => void;
-  onSettings: () => void;
-  onSyncPill: () => void;
-}) => {
+/** Wordmark, sync status and settings. Sits above the month title. */
+export const ListTopBar = ({ onSettings, onSyncPill }: { onSettings: () => void; onSyncPill: () => void }) => {
   const { colors } = useTheme();
   return (
-    <View style={styles.header}>
-      <View style={styles.topRow}>
-        <Text variant="wordmark" color="accent">
-          ميرة
-        </Text>
-        <View style={styles.topRight}>
-          <SyncPill onPress={onSyncPill} />
-          <Tap accessibilityRole="button" accessibilityLabel="Settings" onPress={onSettings} style={styles.settings}>
-            <Icon name="settings-2" size={22} color={colors.ink2} />
-          </Tap>
-        </View>
-      </View>
-      <View style={styles.monthRow}>
-        <IconButton icon="chevron-left" label="Previous month" onPress={onPrevious} disabled={!canGoBack} />
-        <Animated.View key={month} entering={direction > 0 ? FadeInDown.duration(220) : FadeInUp.duration(220)} style={styles.monthTitle}>
-          <Text variant="display">{monthName(month)}</Text>
-          <Text variant="display" color="ink3" style={styles.year}>
-            {monthYear(month)}
-          </Text>
-        </Animated.View>
-        <IconButton icon="chevron-right" label="Next month" onPress={onNext} disabled={!canGoForward} />
+    <View style={styles.topRow}>
+      <Text variant="wordmark" color="accent">
+        ميرة
+      </Text>
+      <View style={styles.topRight}>
+        <SyncPill onPress={onSyncPill} />
+        <Tap accessibilityRole="button" accessibilityLabel="Settings" onPress={onSettings} style={styles.settings}>
+          <Icon name="settings-2" size={22} color={colors.ink2} />
+        </Tap>
       </View>
     </View>
   );
 };
 
+/**
+ * "November 2026". Tapping the title opens the
+ * month picker, and screen readers get previous/next actions.
+ */
+export const MonthTitle = ({
+  month,
+  canGoBack,
+  canGoForward,
+  onStep,
+  onOpenPicker,
+}: {
+  month: MonthKey;
+  canGoBack: boolean;
+  canGoForward: boolean;
+  onStep: (direction: 1 | -1) => void;
+  onOpenPicker: () => void;
+}) => {
+  const { colors } = useTheme();
+  return (
+    <Tap
+      accessibilityRole="adjustable"
+      accessibilityLabel={`${monthName(month)} ${monthYear(month)}`}
+      accessibilityHint="Double tap to pick a month"
+      accessibilityActions={[
+        ...(canGoForward ? [{ name: "increment", label: "Next month" }] : []),
+        ...(canGoBack ? [{ name: "decrement", label: "Previous month" }] : []),
+      ]}
+      onAccessibilityAction={(event) => {
+        if (event.nativeEvent.actionName === "increment") onStep(1);
+        if (event.nativeEvent.actionName === "decrement") onStep(-1);
+      }}
+      pressScale={0.98}
+      onPress={onOpenPicker}
+      style={styles.monthTitle}
+    >
+      <Text variant="display">{monthName(month)}</Text>
+      <Text variant="display" color="ink3" style={styles.year}>
+        {monthYear(month)}
+      </Text>
+      <View style={styles.chevron}>
+        <Icon name="chevrons-up-down" size={18} color={colors.ink3} />
+      </View>
+    </Tap>
+  );
+};
+
 const styles = StyleSheet.create({
-  header: { gap: 14, paddingBottom: 6 },
   topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   topRight: { flexDirection: "row", alignItems: "center", gap: 4 },
   settings: { width: 44, height: 44, alignItems: "center", justifyContent: "center", marginRight: -10 },
   pill: { height: 30, borderRadius: 15, borderWidth: 1, paddingLeft: 10, paddingRight: 12, flexDirection: "row", alignItems: "center", gap: 6 },
   pendingLabel: { fontFamily: FONTS.bodyMedium },
-  monthRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  monthTitle: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
+  monthTitle: { flexDirection: "row", alignItems: "flex-end", gap: 8, alignSelf: "flex-start", minHeight: 44, paddingTop: 10, paddingBottom: 6 },
   year: { fontFamily: FONTS.displayLight },
+  chevron: { paddingBottom: 9 },
 });

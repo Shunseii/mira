@@ -5,6 +5,7 @@ import { FONTS, TAP } from "@/theme/tokens";
 import { Icon, type IconName } from "./Icon";
 import { Tap } from "./Tap";
 import { Text } from "./Text";
+import { SquircleFill } from "./Squircle";
 
 type FieldProps = TextInputProps & {
   label?: string;
@@ -25,7 +26,8 @@ export const Field = forwardRef<TextInput, FieldProps>(({ label, icon, error, se
           {label}
         </Text>
       ) : null}
-      <View style={[styles.box, { backgroundColor: colors.surface, borderColor, borderWidth: focused || error ? 1.5 : 1 }]}>
+      <View style={styles.box}>
+        <SquircleFill radius={14} color={colors.surface} stroke={{ color: borderColor, width: focused || error ? 1.5 : 1 }} />
         {icon ? <Icon name={icon} size={20} color={colors.ink3} /> : null}
         <TextInput
           ref={ref}
@@ -61,7 +63,7 @@ Field.displayName = "Field";
 
 const styles = StyleSheet.create({
   wrap: { gap: 8, alignSelf: "stretch" },
-  box: { height: TAP.row, borderRadius: 14, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", gap: 10 },
+  box: { height: TAP.row, paddingHorizontal: 17, flexDirection: "row", alignItems: "center", gap: 10 },
   input: { flex: 1, fontFamily: FONTS.body, fontSize: 17, height: "100%", outlineWidth: 0 },
   eye: { width: TAP.min, height: TAP.min, alignItems: "center", justifyContent: "center", marginRight: -10 },
 });

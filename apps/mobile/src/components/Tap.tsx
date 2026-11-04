@@ -2,6 +2,7 @@ import * as Haptics from "expo-haptics";
 import type { ReactNode } from "react";
 import { Platform, Pressable, type PressableProps, type StyleProp, type ViewStyle } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
+import { SPRING_SNAPPY } from "@/theme/motion";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -18,30 +19,51 @@ type TapProps = Omit<PressableProps, "style" | "children"> & {
   /** How far it shrinks while pressed. */
   pressScale?: number;
   feedback?: "light" | "medium" | "select" | "none";
+  /** false: the caller shows its own disabled look instead of the whole thing fading. */
+  dimWhenDisabled?: boolean;
 };
 
+/** Waits this long before showing a press, so a touch that turns into a scroll never highlights or shrinks (as on iOS). */
+export const PRESS_DELAY_MS = 100;
+
+/** How long to hold a row to pick it up (press delay included). */
+export const HOLD_MS = 350;
+
 /** Pressable with a springy press-in and optional haptic, used for every tap target. */
-export const Tap = ({ style, children, pressScale = 0.96, feedback = "none", onPressIn, onPressOut, onPress, disabled, ...rest }: TapProps) => {
+export const Tap = ({
+  style,
+  children,
+  pressScale = 0.96,
+  feedback = "none",
+  unstable_pressDelay = PRESS_DELAY_MS,
+  onPressIn,
+  onPressOut,
+  onPress,
+  disabled,
+  dimWhenDisabled = true,
+  ...rest
+}: TapProps) => {
   const scale = useSharedValue(1);
   const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
     <AnimatedPressable
       {...rest}
       disabled={disabled}
+      unstable_pressDelay={unstable_pressDelay}
       hitSlop={rest.hitSlop ?? 4}
       onPressIn={(event) => {
-        scale.value = withSpring(pressScale, { damping: 20, stiffness: 400 });
+        scale.set(withSpring(pressScale, SPRING_SNAPPY));
         onPressIn?.(event);
       }}
       onPressOut={(event) => {
-        scale.value = withSpring(1, { damping: 14, stiffness: 300 });
+        scale.set(withSpring(1, SPRING_SNAPPY));
         onPressOut?.(event);
       }}
       onPress={(event) => {
         if (feedback !== "none") haptic(feedback);
         onPress?.(event);
       }}
-      style={[animated, style, disabled ? { opacity: 0.5 } : null]}
+      style={[animated, style, disabled && dimWhenDisabled ? { opacity: 0.5 } : null]}
     >
       {children}
     </AnimatedPressable>
