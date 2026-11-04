@@ -6,7 +6,8 @@ web-build/
 .env
 .env.*
 !.env.example
-data/
+/data/
+apps/server/data/
 ios/
 android/
 .DS_Store
