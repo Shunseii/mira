@@ -1,0 +1,22 @@
+node_modules/
+dist/
+.expo/
+web-build/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+data/
+ios/
+android/
+.DS_Store
+expo-env.d.ts
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+deploy/password.txt
+
+# Google Play service account key for eas submit
+play-service-account.json

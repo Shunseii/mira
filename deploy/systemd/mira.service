@@ -1,0 +1,30 @@
+# Fallback: run the bundled server directly under a systemd user unit (no container).
+# Needs Node >= 22.13 on the host. Bazzite doesn't ship Node; `brew install node` works
+# without layering. Adjust ExecStart if node lives elsewhere (`command -v node`).
+#
+# Setup:
+#   pnpm install && pnpm --filter @mira/server build && pnpm --filter @mira/mobile build:web
+#   mkdir -p ~/.local/share/mira/web ~/.config/mira
+#   cp apps/server/dist/server.mjs ~/.local/share/mira/ && cp -r apps/mobile/dist/. ~/.local/share/mira/web/
+#   printf 'MIRA_PASSWORD=%s\n' 'your-household-password' > ~/.config/mira/env && chmod 600 ~/.config/mira/env
+#   cp deploy/systemd/mira.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now mira
+#   loginctl enable-linger "$USER"
+
+[Unit]
+Description=Mira household grocery sync server
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+EnvironmentFile=%h/.config/mira/env
+Environment=PORT=8787
+Environment=MIRA_DATA_DIR=%h/.local/share/mira/data
+Environment=MIRA_WEB_DIR=%h/.local/share/mira/web
+Environment=NODE_NO_WARNINGS=1
+ExecStart=/home/linuxbrew/.linuxbrew/bin/node %h/.local/share/mira/server.mjs
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

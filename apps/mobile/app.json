@@ -1,0 +1,91 @@
+{
+  "expo": {
+    "name": "Mira",
+    "slug": "mira",
+    "scheme": "mira",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#F5F1E8",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/6bf8fb07-bc8a-4b71-a37d-2ae4e0155270"
+    },
+    "ios": {
+      "bundleIdentifier": "com.shunseii.mira",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "Mira syncs your household list with your own server on your home network.",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSAllowsLocalNetworking": true
+        },
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.shunseii.mira",
+      "adaptiveIcon": {
+        "backgroundColor": "#B4502B",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "softwareKeyboardLayoutMode": "resize",
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "single",
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png",
+      "name": "Mira",
+      "shortName": "Mira",
+      "themeColor": "#F5F1E8",
+      "backgroundColor": "#F5F1E8"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-sqlite",
+      "expo-secure-store",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F5F1E8",
+          "dark": {
+            "backgroundColor": "#1E1A16"
+          },
+          "imageWidth": 120,
+          "image": "./assets/splash-icon.png"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      "expo-quick-actions",
+      "expo-localization"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6bf8fb07-bc8a-4b71-a37d-2ae4e0155270"
+      }
+    },
+    "owner": "shunsei"
+  }
+}

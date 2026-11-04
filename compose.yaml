@@ -1,0 +1,26 @@
+# Docker:  echo 'your-household-password' > deploy/password.txt && docker compose up -d --build
+# Podman:  same file works with `podman compose up -d --build`
+# On Bazzite prefer the Quadlet in deploy/quadlet/ (systemd-managed, starts at boot).
+services:
+  mira:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: localhost/mira-server:latest
+    container_name: mira
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      MIRA_PASSWORD_FILE: /run/secrets/mira_password
+    secrets:
+      - mira_password
+    volumes:
+      - mira-data:/data
+
+secrets:
+  mira_password:
+    file: ./deploy/password.txt
+
+volumes:
+  mira-data:

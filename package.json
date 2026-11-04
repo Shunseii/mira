@@ -1,0 +1,12 @@
+{
+  "name": "mira",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@10.11.0",
+  "scripts": {
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "server": "pnpm --filter @mira/server dev",
+    "mobile": "pnpm --filter @mira/mobile start"
+  }
+}

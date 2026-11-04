@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+    <title>%WEB_TITLE%</title>
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F5F1E8" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1E1A16" />
+    <style id="expo-reset">
+      html,
+      body {
+        height: 100%;
+        background: #f5f1e8;
+      }
+      @media (prefers-color-scheme: dark) {
+        html,
+        body {
+          background: #1e1a16;
+        }
+      }
+      body {
+        overflow: hidden;
+        -webkit-tap-highlight-color: transparent;
+      }
+      input,
+      textarea {
+        outline: none;
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>You need to enable JavaScript to run Mira.</noscript>
+    <div id="root"></div>
+    <script>
+      // Service workers only register on HTTPS (or localhost). Over plain http the
+      // app still runs, it just won't install or open offline.
+      if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("/sw.js").catch(function (error) {
+            console.warn("Mira: service worker registration failed", error);
+          });
+        });
+      }
+    </script>
+  </body>
+</html>

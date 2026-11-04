@@ -1,0 +1,9 @@
+**/node_modules
+**/dist
+**/.expo
+apps/server/data
+deploy/password.txt
+apps/mobile/ios
+apps/mobile/android
+designs
+.git

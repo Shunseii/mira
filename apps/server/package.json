@@ -1,0 +1,26 @@
+{
+  "name": "@mira/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/server.mjs",
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mira/shared": "workspace:*",
+    "tinybase": "10.0.1",
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/ws": "^8.5.13",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.19.0",
+    "typescript": "~6.0.3",
+    "vitest": "^4.0.0"
+  }
+}
