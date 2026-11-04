@@ -7,7 +7,6 @@ import {
   authProtocols,
   buildMonthView,
   carriedItemId,
-  carriedSince,
   createGroup,
   deleteGroup,
   deleteItem,
@@ -16,15 +15,23 @@ import {
   monthKeyOf,
   monthStart,
   moveItem,
+  moveItemInPriority,
   passwordFromProtocols,
   rollover,
   setChecked,
+  setCheckedMany,
+  deleteItems,
+  restoreItems,
+  restoreGroup,
+  liveGroups,
   stableHash,
   toBase64Url,
   suggestUnits,
   customUnits,
   GROUP_COLOR_PRESETS,
   GROUP_ICONS,
+  formatQuantity,
+  searchGroupIcons,
   isGroupIcon,
   GROUP_GRADIENT_PRESETS,
   updateGroup,
@@ -85,7 +92,6 @@ describe("rollover", () => {
       groupId: produce,
       addedAt: midOct,
     });
-    expect(carriedSince({ item: copy!, month: NOV })).toBe("Oct");
   });
 
   it("is idempotent and never resurrects a deleted carry-over", () => {
@@ -121,23 +127,48 @@ describe("rollover", () => {
 });
 
 describe("month view", () => {
-  it("puts ungrouped first, groups in household order, checked in the basket", () => {
+  it("puts ungrouped first, groups in household order, and keeps checked items in their group", () => {
     const store = newStore();
     const dairy = createGroup({ store, group: { name: "Dairy" } });
     const produce = createGroup({ store, group: { name: "Produce" } });
     createGroup({ store, group: { name: "Empty" } });
     addItem({ store, month: NOV, userId: "u1", item: { name: "Candles" } });
+    const milk = addItem({ store, month: NOV, userId: "u1", item: { name: "Milk", groupId: dairy } });
     addItem({ store, month: NOV, userId: "u1", item: { name: "Labneh", groupId: dairy } });
     addItem({ store, month: NOV, userId: "u1", item: { name: "Coriander", groupId: produce } });
-    const milk = addItem({ store, month: NOV, userId: "u1", item: { name: "Milk", groupId: dairy } });
     setChecked({ store, itemId: milk, userId: "u1", checked: true });
 
     const view = buildMonthView({ store, month: NOV });
     expect(view.sections.map((section) => section.group?.name ?? "ungrouped")).toEqual(["ungrouped", "Dairy", "Produce"]);
-    expect(view.basket.map((item) => item.name)).toEqual(["Milk"]);
+    const dairySection = view.sections[1];
+    expect(dairySection?.items.map((item) => item.name)).toEqual(["Labneh", "Milk"]);
+    expect(dairySection?.remaining).toBe(1);
     expect(view.leftCount).toBe(3);
 
     expect(buildMonthView({ store, month: NOV, search: "cori" }).sections).toHaveLength(1);
+  });
+
+  it("keeps checked items in manual order after checking a whole group at once", () => {
+    const store = newStore();
+    const produce = createGroup({ store, group: { name: "Produce" } });
+    const ids = ["Apples", "Bananas", "Cherries", "Dates"].map((name) =>
+      addItem({ store, month: NOV, userId: "u1", item: { name, groupId: produce } }),
+    );
+    setCheckedMany({ store, itemIds: [...ids].reverse(), userId: "u1", checked: true, now: 1000 });
+    expect(buildMonthView({ store, month: NOV }).sections[0]?.items.map((item) => item.name)).toEqual(["Apples", "Bananas", "Cherries", "Dates"]);
+  });
+
+  it("checks, unchecks, deletes and restores items in bulk", () => {
+    const store = newStore();
+    const ids = ["A", "B", "C"].map((name) => addItem({ store, month: NOV, userId: "u1", item: { name } }));
+    setCheckedMany({ store, itemIds: ids.slice(0, 2), userId: "u2", checked: true });
+    expect(buildMonthView({ store, month: NOV }).leftCount).toBe(1);
+    setCheckedMany({ store, itemIds: ids, userId: "u2", checked: false });
+    expect(buildMonthView({ store, month: NOV }).leftCount).toBe(3);
+    deleteItems({ store, itemIds: ids.slice(1) });
+    expect(liveItemsOf({ store, month: NOV })).toHaveLength(1);
+    restoreItems({ store, itemIds: ids.slice(1) });
+    expect(liveItemsOf({ store, month: NOV })).toHaveLength(3);
   });
 
   it("deleting a group leaves its items ungrouped", () => {
@@ -148,6 +179,67 @@ describe("month view", () => {
     expect(buildMonthView({ store, month: NOV }).sections[0]?.key).toBe("ungrouped");
   });
 
+  it("restores a deleted group with its items", () => {
+    const store = newStore();
+    const pantry = createGroup({ store, group: { name: "Pantry" } });
+    const dairy = createGroup({ store, group: { name: "Dairy" } });
+    const rice = addItem({ store, month: NOV, userId: "u1", item: { name: "Rice", groupId: pantry } });
+    const oil = addItem({ store, month: NOV, userId: "u1", item: { name: "Oil", groupId: pantry } });
+    const milk = addItem({ store, month: NOV, userId: "u1", item: { name: "Milk", groupId: dairy } });
+
+    const ungrouped = deleteGroup({ store, groupId: pantry });
+    expect(ungrouped.sort()).toEqual([rice, oil].sort());
+    expect(liveGroups({ store }).map((group) => group.name)).toEqual(["Dairy"]);
+
+    restoreGroup({ store, groupId: pantry, itemIds: ungrouped });
+    expect(liveGroups({ store }).map((group) => group.name)).toEqual(["Pantry", "Dairy"]);
+    const sections = buildMonthView({ store, month: NOV }).sections;
+    expect(sections.map((section) => section.key)).toEqual([pantry, dairy]);
+    expect(sections[0]?.items.map((item) => item.name).sort()).toEqual(["Oil", "Rice"]);
+    expect(sections[1]?.items.map((item) => item.id)).toEqual([milk]);
+  });
+
+  it("doesn't regroup an item that was given another group before undo", () => {
+    const store = newStore();
+    const pantry = createGroup({ store, group: { name: "Pantry" } });
+    const dairy = createGroup({ store, group: { name: "Dairy" } });
+    const rice = addItem({ store, month: NOV, userId: "u1", item: { name: "Rice", groupId: pantry } });
+    const ungrouped = deleteGroup({ store, groupId: pantry });
+    store.setCell("items", rice, "group_id", dairy);
+    restoreGroup({ store, groupId: pantry, itemIds: ungrouped });
+    expect(store.getCell("items", rice, "group_id")).toBe(dairy);
+  });
+
+  it("finds items by their note in search", () => {
+    const store = newStore();
+    addItem({ store, month: NOV, userId: "u1", item: { name: "Milk", note: "The blue carton, 2%" } });
+    addItem({ store, month: NOV, userId: "u1", item: { name: "Bread" } });
+    const names = (search: string) =>
+      buildMonthView({ store, month: NOV, search }).sections.flatMap((section) => section.items.map((item) => item.name));
+    expect(names("blue carton")).toEqual(["Milk"]);
+    expect(names("BREAD")).toEqual(["Bread"]);
+  });
+
+  it("moves checked items into their own list when asked", () => {
+    const store = newStore();
+    const dairy = createGroup({ store, group: { name: "Dairy" } });
+    const milk = addItem({ store, month: NOV, userId: "u1", item: { name: "Milk", groupId: dairy } });
+    addItem({ store, month: NOV, userId: "u1", item: { name: "Eggs", groupId: dairy } });
+    const rice = addItem({ store, month: NOV, userId: "u1", item: { name: "Rice" } });
+    setCheckedMany({ store, itemIds: [milk, rice], userId: "u1", checked: true });
+
+    const apart = buildMonthView({ store, month: NOV, checkedApart: true });
+    expect(apart.checked.map((item) => item.name)).toEqual(["Milk", "Rice"]);
+    expect(apart.sections.map((section) => section.key)).toEqual([dairy]);
+    expect(apart.sections[0]?.items.map((item) => item.name)).toEqual(["Eggs"]);
+    expect(apart.sections[0]?.remaining).toBe(1);
+    expect(apart.priority.map((item) => item.name)).toEqual(["Eggs"]);
+
+    const inline = buildMonthView({ store, month: NOV });
+    expect(inline.checked).toEqual([]);
+    expect(inline.priority.map((item) => item.name)).toEqual(["Eggs", "Milk", "Rice"]);
+  });
+
   it("reorders with midpoint positions", () => {
     const store = newStore();
     const a = addItem({ store, month: NOV, userId: "u1", item: { name: "A" } });
@@ -155,6 +247,57 @@ describe("month view", () => {
     addItem({ store, month: NOV, userId: "u1", item: { name: "C" } });
     moveItem({ store, itemId: a, toGroupId: undefined, toIndex: 1 });
     expect(buildMonthView({ store, month: NOV }).sections[0]?.items.map((item) => item.name)).toEqual(["B", "A", "C"]);
+  });
+
+  it("keeps checked items in place when they don't sink to the end", () => {
+    const store = newStore();
+    const a = addItem({ store, month: NOV, userId: "u1", item: { name: "A" } });
+    addItem({ store, month: NOV, userId: "u1", item: { name: "B" } });
+    setChecked({ store, itemId: a, userId: "u1", checked: true });
+    const names = (checkedLast: boolean) => buildMonthView({ store, month: NOV, checkedLast }).priority.map((item) => item.name);
+    expect(names(true)).toEqual(["B", "A"]);
+    expect(names(false)).toEqual(["A", "B"]);
+  });
+
+  it("drops between items that share a position", () => {
+    const store = newStore();
+    const ids = ["A", "B", "C"].map((name) => addItem({ store, month: NOV, userId: "u1", item: { name }, now: 1 }));
+    for (const id of ids) store.setCell("items", id, "position", 1);
+    const order = () => buildMonthView({ store, month: NOV }).priority.map((item) => item.id);
+    const [first, second, third] = order();
+    moveItemInPriority({ store, itemId: third!, toIndex: 1 });
+    expect(order()).toEqual([first, third, second]);
+  });
+
+  it("shares one order between By group and By priority", () => {
+    const store = newStore();
+    const produce = createGroup({ store, group: { name: "Produce" } });
+    const dairy = createGroup({ store, group: { name: "Dairy" } });
+    const add = ({ name, groupId }: { name: string; groupId: string }) => addItem({ store, month: NOV, userId: "u1", item: { name, groupId } });
+    const tomatoes = add({ name: "Tomatoes", groupId: produce });
+    add({ name: "Eggs", groupId: dairy });
+    add({ name: "Lemons", groupId: produce });
+    const labneh = add({ name: "Labneh", groupId: dairy });
+    const names = (items: { name: string }[]) => items.map((item) => item.name);
+    const view = () => buildMonthView({ store, month: NOV });
+
+    expect(names(view().priority)).toEqual(["Tomatoes", "Eggs", "Lemons", "Labneh"]);
+
+    moveItemInPriority({ store, itemId: labneh, toIndex: 0 });
+    expect(names(view().priority)).toEqual(["Labneh", "Tomatoes", "Eggs", "Lemons"]);
+    // Switching to By group keeps the priority order inside each group.
+    expect(view().sections.map((section) => names(section.items))).toEqual([
+      ["Tomatoes", "Lemons"],
+      ["Labneh", "Eggs"],
+    ]);
+
+    // Dragging inside a section only changes order relative to that group.
+    moveItem({ store, itemId: tomatoes, toGroupId: produce, toIndex: 1 });
+    expect(view().sections.map((section) => names(section.items))).toEqual([
+      ["Lemons", "Tomatoes"],
+      ["Labneh", "Eggs"],
+    ]);
+    expect(names(view().priority)).toEqual(["Labneh", "Eggs", "Lemons", "Tomatoes"]);
   });
 });
 
@@ -200,10 +343,20 @@ describe("auth protocol", () => {
 describe("group colours", () => {
   const LIGHT_BG = "#F5F1E8";
   const DARK_BG = "#1E1A16";
-  const sweep = [...GROUP_COLOR_PRESETS.map((preset) => preset.hex), ...Array.from({ length: 24 }, (_, i) => hexFromHue({ hue: i * 15, intensity: 1 })), "#FFFF00", "#000000", "#FFFFFF", "#808080"];
+  const sweep = [
+    ...GROUP_COLOR_PRESETS.map((preset) => preset.hex),
+    ...Array.from({ length: 24 }, (_, i) => hexFromHue({ hue: i * 15, intensity: 1 })),
+    "#FFFF00",
+    "#000000",
+    "#FFFFFF",
+    "#808080",
+  ];
 
   const assertReadable = ({ hex, hex2 }: { hex: string; hex2?: string }) => {
-    for (const [scheme, pageBackground] of [["light", LIGHT_BG], ["dark", DARK_BG]] as const) {
+    for (const [scheme, pageBackground] of [
+      ["light", LIGHT_BG],
+      ["dark", DARK_BG],
+    ] as const) {
       const tone = groupTone({ hex, hex2, scheme, pageBackground });
       const label = `${hex}${hex2 ? `→${hex2}` : ""} ${scheme}`;
       expect(tone.tintStops).toHaveLength(hex2 ? 2 : 1);
@@ -240,7 +393,10 @@ describe("group colours", () => {
     expect(store.getCell("groups", id, "color2")).toBeUndefined();
     updateGroup({ store, groupId: id, patch: { appearance: {} } });
     expect(store.getCell("groups", id, "color")).toBeUndefined();
-    expect(createGroup({ store, group: { name: "Odd", color2: "#2D6E68" } }) && store.getCell("groups", store.getRowIds("groups").at(-1) as string, "color2")).toBeUndefined();
+    expect(
+      createGroup({ store, group: { name: "Odd", color2: "#2D6E68" } }) &&
+        store.getCell("groups", store.getRowIds("groups").at(-1) as string, "color2"),
+    ).toBeUndefined();
   });
 
   it("stores a canonical hex and reads legacy token names", () => {
@@ -271,5 +427,37 @@ describe("group icons", () => {
     expect(isGroupIcon(store.getCell("groups", id, "icon") as string)).toBe(false);
     updateGroup({ store, groupId: id, patch: { name: "Sea food" } });
     expect(store.getCell("groups", id, "icon")).toBe("lobster-from-the-future");
+  });
+});
+
+describe("icon search", () => {
+  it("finds icons by keyword, as in the design's bread example", () => {
+    expect(searchGroupIcons("bread").slice(0, 3).sort()).toEqual(["croissant", "sandwich", "wheat"]);
+  });
+  it("ranks name matches above keyword matches and requires every word", () => {
+    expect(searchGroupIcons("ice cream")[0]).toBe("ice-cream-cone");
+    expect(searchGroupIcons("milk")[0]).toBe("milk");
+    expect(searchGroupIcons("zzz")).toEqual([]);
+    expect(searchGroupIcons("")).toHaveLength(GROUP_ICONS.length);
+  });
+  it("keeps every previously shipped key", () => {
+    for (const key of ["carrot", "spray-can", "thermometer-snowflake", "heart", "sparkles"]) expect(isGroupIcon(key)).toBe(true);
+  });
+});
+
+describe("quantity formatting", () => {
+  it("pluralises count units but not metric ones", () => {
+    expect(formatQuantity({ qty: "2", unit: "bunch" })).toBe("2 bunches");
+    expect(formatQuantity({ qty: "1", unit: "bunch" })).toBe("1 bunch");
+    expect(formatQuantity({ qty: "3", unit: "bottle" })).toBe("3 bottles");
+    expect(formatQuantity({ qty: "2", unit: "box" })).toBe("2 boxes");
+    expect(formatQuantity({ qty: "2", unit: "kg" })).toBe("2 kg");
+    expect(formatQuantity({ qty: "2", unit: "L" })).toBe("2 L");
+    expect(formatQuantity({ qty: "2", unit: "dozen" })).toBe("2 dozen");
+    expect(formatQuantity({ qty: "4", unit: "punnet" })).toBe("4 punnets");
+    expect(formatQuantity({ qty: "2", unit: "berry" })).toBe("2 berries");
+    expect(formatQuantity({ qty: "2", unit: "packs" })).toBe("2 packs");
+    expect(formatQuantity({ unit: "pack" })).toBe("1 pack");
+    expect(formatQuantity({ qty: "6" })).toBe("6");
   });
 });

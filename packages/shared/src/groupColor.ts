@@ -1,8 +1,10 @@
 import {
   clampChroma,
   converter,
+  differenceEuclidean,
   formatHex,
   modeLrgb,
+  modeOklab,
   modeOklch,
   modeRgb,
   parseHex,
@@ -13,23 +15,24 @@ import {
 
 useMode(modeRgb);
 useMode(modeLrgb);
+useMode(modeOklab);
 useMode(modeOklch);
 const toOklch = converter("oklch");
+const oklabDistance = differenceEuclidean("oklab");
 
-/** Starting palette in the Edit group picker. Users can also pick any custom hex. */
+/** Solid swatches in the Edit group colour row, in design order. Users can also pick a custom solid. */
 export const GROUP_COLOR_PRESETS = [
-  { name: "Terracotta", hex: "#B4502B" },
-  { name: "Ochre", hex: "#B07D1F" },
-  { name: "Olive", hex: "#6B7A2E" },
-  { name: "Green", hex: "#3E7B4F" },
-  { name: "Teal", hex: "#2D6E68" },
-  { name: "Sky", hex: "#2F6E9E" },
-  { name: "Indigo", hex: "#4A57A3" },
-  { name: "Violet", hex: "#6E4A9E" },
-  { name: "Plum", hex: "#8E3B6B" },
-  { name: "Rose", hex: "#B04A5A" },
-  { name: "Brown", hex: "#7A5A3C" },
-  { name: "Slate", hex: "#5F6B73" },
+  { name: "Olive", hex: "#5D7627" },
+  { name: "Ochre", hex: "#8D6300" },
+  { name: "Teal", hex: "#087C77" },
+  { name: "Terracotta", hex: "#AC4A1E" },
+  { name: "Indigo", hex: "#5264B6" },
+  { name: "Slate", hex: "#5B6F7B" },
+  { name: "Plum", hex: "#9E497D" },
+  { name: "Forest", hex: "#2A7E4F" },
+  { name: "Sky", hex: "#1D73A5" },
+  { name: "Rose", hex: "#AD4251" },
+  { name: "Cocoa", hex: "#87634A" },
 ] as const;
 
 /**
@@ -42,12 +45,14 @@ export const GROUP_GRADIENT_SETS = [
     id: "core",
     label: "Gradients",
     presets: [
-      { name: "Sunset", hex: "#B4502B", hex2: "#B07D1F" },
-      { name: "Orchard", hex: "#B07D1F", hex2: "#6B7A2E" },
-      { name: "Garden", hex: "#6B7A2E", hex2: "#2D6E68" },
-      { name: "Lagoon", hex: "#2D6E68", hex2: "#2F6E9E" },
-      { name: "Dusk", hex: "#4A57A3", hex2: "#8E3B6B" },
-      { name: "Berry", hex: "#8E3B6B", hex2: "#B04A5A" },
+      { name: "Lagoon", hex: "#087C77", hex2: "#316CB5" },
+      { name: "Berry", hex: "#AF3679", hex2: "#A35303" },
+      { name: "Meadow", hex: "#547925", hex2: "#087C77" },
+      { name: "Dusk", hex: "#5264B6", hex2: "#AD4251" },
+      { name: "Ember", hex: "#AC4A1E", hex2: "#8D6300" },
+      { name: "Orchid", hex: "#9E497D", hex2: "#5264B6" },
+      { name: "Harbor", hex: "#5B6F7B", hex2: "#1D73A5" },
+      { name: "Fig", hex: "#87634A", hex2: "#9E497D" },
     ],
   },
 ] as const;
@@ -97,13 +102,29 @@ export type GroupTone = {
   onBadge: string;
 };
 
-const LIGHT_ON = "#FFF8F1";
-const DARK_ON = "#1E1A16";
+const LIGHT_ON = "#FFFFFF";
+const DARK_ON = "#1A1714";
 
+/**
+ * OKLCH lightness/chroma per role, calibrated to the design file's group
+ * tokens (e.g. Produce: tint L.93, text L.42, badge L.53 in light; tint L.30,
+ * text L.86, badge L.70 in dark). Chroma follows the stored colour, capped.
+ */
 const ROLE = {
-  light: { tintL: 0.925, tintC: 0.045, textL: 0.47, textC: 0.13, iconL: 0.56, iconC: 0.15, badgeMin: 0.46, badgeMax: 0.62 },
-  dark: { tintL: 0.31, tintC: 0.06, textL: 0.86, textC: 0.09, iconL: 0.78, iconC: 0.12, badgeMin: 0.56, badgeMax: 0.7 },
+  light: { tintL: 0.935, tintScale: 0.32, tintMax: 0.036, textL: 0.42, textScale: 0.85, textMax: 0.11, iconL: 0.5, iconMax: 0.14, badgeL: 0.53 },
+  dark: { tintL: 0.3, tintScale: 0.45, tintMax: 0.05, textL: 0.86, textScale: 0.62, textMax: 0.085, iconL: 0.78, iconMax: 0.12, badgeL: 0.7 },
 } as const;
+
+/**
+ * Gradients whose two colours sit close in hue (Ember, Harbor) barely read as gradients once both ends
+ * share one lightness, so their ends are spread apart in lightness until they differ by at least this
+ * much (OKLab distance), and their tints may be a little more colourful than a solid's.
+ */
+const GRADIENT = {
+  light: { tintMinDistance: 0.06, badgeMinDistance: 0.15, tintMax: 0.05 },
+  dark: { tintMinDistance: 0.07, badgeMinDistance: 0.15, tintMax: 0.065 },
+} as const;
+const MAX_GRADIENT_SPREAD = 0.16;
 
 const toHex = ({ l, c, h }: { l: number; c: number; h: number }): string => {
   const color: Oklch = { mode: "oklch", l: Math.min(1, Math.max(0, l)), c: Math.max(0, c), h };
@@ -154,9 +175,37 @@ const midHue = (a: Stop, b: Stop): number => {
   return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
 };
 
+/**
+ * One hex per stop at lightness `l`; for a two-stop gradient the first end gets darker and the last
+ * lighter until the ends are at least `minDistance` apart.
+ */
+const spreadStops = ({ stops, l, chroma, minDistance }: { stops: Stop[]; l: number; chroma: (stop: Stop) => number; minDistance: number }): string[] => {
+  const draw = (spread: number) => stops.map((stop, index) => toHex({ l: l + (index === 0 ? -spread : spread) / 2, c: chroma(stop), h: stop.h }));
+  let hexes = draw(0);
+  if (stops.length < 2) return hexes;
+  for (let spread = 0.01; spread <= MAX_GRADIENT_SPREAD; spread += 0.01) {
+    if (oklabDistance(hexes[0] as string, hexes[1] as string) >= minDistance) break;
+    hexes = draw(spread);
+  }
+  return hexes;
+};
+
 const minContrast = (color: string, others: string[]): number => Math.min(...others.map((other) => wcagContrast(color, other)));
 
-export const groupTone = ({
+const toneCache = new Map<string, GroupTone>();
+
+/** Cached: tones are pure functions of their inputs and get requested on every render. */
+export const groupTone = (args: { hex: string; hex2?: string; scheme: Scheme; pageBackground: string }): GroupTone => {
+  const key = `${args.hex}|${args.hex2 ?? ""}|${args.scheme}|${args.pageBackground}`;
+  const cached = toneCache.get(key);
+  if (cached) return cached;
+  const tone = computeGroupTone(args);
+  if (toneCache.size > 500) toneCache.clear();
+  toneCache.set(key, tone);
+  return tone;
+};
+
+const computeGroupTone = ({
   hex,
   hex2,
   scheme,
@@ -177,17 +226,25 @@ export const groupTone = ({
   const inkHue = stops.length > 1 ? midHue(first, last) : first.h;
   const inkChroma = Math.min(...stops.map((stop) => stop.c));
 
-  const tintStops = stops.map((stop) => toHex({ l: role.tintL, c: Math.min(stop.c * 0.4, role.tintC), h: stop.h }));
+  const gradient = GRADIENT[scheme];
+  const isGradient = stops.length > 1;
+  const tintMax = isGradient ? gradient.tintMax : role.tintMax;
+  const tintStops = spreadStops({
+    stops,
+    l: role.tintL,
+    chroma: (stop) => Math.min(stop.c * role.tintScale, tintMax),
+    minDistance: gradient.tintMinDistance,
+  });
   const text = nudge({
     l: role.textL,
-    c: Math.min(inkChroma, role.textC),
+    c: Math.min(inkChroma * role.textScale, role.textMax),
     h: inkHue,
     against: [...tintStops, pageBackground],
     min: 4.5,
     direction: toward,
   });
-  const icon = nudge({ l: role.iconL, c: Math.min(inkChroma, role.iconC), h: inkHue, against: tintStops, min: 3, direction: toward });
-  const badgeStops = stops.map((stop) => toHex({ l: Math.min(role.badgeMax, Math.max(role.badgeMin, stop.l)), c: stop.c, h: stop.h }));
+  const icon = nudge({ l: role.iconL, c: Math.min(inkChroma, role.iconMax), h: inkHue, against: tintStops, min: 3, direction: toward });
+  const badgeStops = spreadStops({ stops, l: role.badgeL, chroma: (stop) => stop.c, minDistance: gradient.badgeMinDistance });
   const onBadge = minContrast(LIGHT_ON, badgeStops) >= minContrast(DARK_ON, badgeStops) ? LIGHT_ON : DARK_ON;
 
   return { tintStops, text, icon, badgeStops, onBadge };
