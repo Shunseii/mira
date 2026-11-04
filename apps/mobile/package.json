@@ -1,11 +1,11 @@
 {
   "name": "@mira/mobile",
   "version": "1.0.0",
-  "main": "expo-router/entry",
+  "main": "index.ts",
   "dependencies": {
-    "@expo-google-fonts/amiri": "^0.4.1",
     "@expo-google-fonts/fraunces": "^0.4.1",
     "@expo-google-fonts/instrument-sans": "^0.4.2",
+    "@expo-google-fonts/noto-naskh-arabic": "^0.4.5",
     "@gorhom/bottom-sheet": "^5.2.14",
     "@mira/shared": "workspace:*",
     "expo": "~57.0.31",
@@ -34,6 +34,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-android-widget": "^0.26.0",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-keyboard-controller": "1.21.9",
     "react-native-reanimated": "4.5.1",
@@ -41,12 +42,15 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.2",
     "react-native-svg": "15.15.4",
+    "react-native-view-shot": "5.1.0",
     "react-native-web": "^0.21.4",
     "react-native-worklets": "0.10.1",
     "tinybase": "10.0.1"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "~57.0.2",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -55,7 +59,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "build:web": "expo export -p web"
+    "build:web": "expo export -p web",
+    "lint": "expo lint"
   },
   "private": true
 }

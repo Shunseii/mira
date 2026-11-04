@@ -75,7 +75,33 @@
         }
       ],
       "expo-quick-actions",
-      "expo-localization"
+      "expo-localization",
+      [
+        "react-native-android-widget",
+        {
+          "fonts": [
+            "./node_modules/@expo-google-fonts/noto-naskh-arabic/700Bold/NotoNaskhArabic_700Bold.ttf",
+            "./node_modules/@expo-google-fonts/fraunces/500Medium/Fraunces_500Medium.ttf",
+            "./node_modules/@expo-google-fonts/instrument-sans/400Regular/InstrumentSans_400Regular.ttf",
+            "./node_modules/@expo-google-fonts/instrument-sans/600SemiBold/InstrumentSans_600SemiBold.ttf"
+          ],
+          "widgets": [
+            {
+              "name": "GroceryList",
+              "label": "Mira list",
+              "description": "This month's groceries at a glance",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "maxResizeWidth": "500dp",
+              "maxResizeHeight": "600dp",
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
