@@ -24,6 +24,11 @@ const SPLASH_ICON = require("../../assets/splash-icon.png");
 const SPLASH_ICON_SIZE = 120;
 /** The wordmark's ink inside splash-icon.png, in its own pixels. */
 const ICON_INK = { x: 167, y: 204, width: 266, height: 190, size: 600 };
+/**
+ * Off for now: the glide sometimes overshoots above the header and drops back. Until that's fixed,
+ * the splash just fades into the app, as with reduced motion.
+ */
+const GLIDE_ENABLED = false;
 /** Long enough for the home list or login to lay out its wordmark; after that, just fade. */
 const TARGET_WAIT_MS = 600;
 /** If the icon hasn't reported loading by then, hand over anyway. */
@@ -114,7 +119,7 @@ export const SplashOverlay = () => {
   // Then glide onto the wordmark once it has laid out, or fade if it doesn't.
   useEffect(() => {
     if (!splashHidden || !frame || started.current || gone) return undefined;
-    if (reduceMotion) {
+    if (reduceMotion || !GLIDE_ENABLED) {
       fadeOut();
       return undefined;
     }
