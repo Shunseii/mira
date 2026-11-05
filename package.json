@@ -7,6 +7,7 @@
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "server": "pnpm --filter @mira/server dev",
-    "mobile": "pnpm --filter @mira/mobile start"
+    "mobile": "pnpm --filter @mira/mobile start",
+    "ota": "cd apps/mobile && EXPO_PUBLIC_OTA_COMMIT=$(git rev-parse --short HEAD)$(git diff --quiet HEAD -- . ../../packages/shared || echo -dirty) npx eas-cli update --channel production --platform android --environment production --non-interactive -m"
   }
 }

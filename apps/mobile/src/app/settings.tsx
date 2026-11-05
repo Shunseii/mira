@@ -238,7 +238,7 @@ const SettingsRow = ({
         {label}
       </Text>
       {value ? (
-        <Text variant="caption" color="ink2" numberOfLines={1} style={styles.rowValue}>
+        <Text variant="caption" color="ink2" numberOfLines={1} selectable={!onPress} style={styles.rowValue}>
           {value}
         </Text>
       ) : null}

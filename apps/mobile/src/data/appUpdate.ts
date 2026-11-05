@@ -11,6 +11,9 @@ export type UpdateStatus = "idle" | "checking" | "downloading" | "failed" | "rea
  */
 const IS_DEVELOPMENT_BUILD = Application.applicationId?.endsWith(".dev") ?? false;
 
+/** The git commit an update was published from, stamped in by `pnpm ota "<message>"` (root package.json); "-dirty" if it had uncommitted changes. */
+const UPDATE_COMMIT = process.env.EXPO_PUBLIC_OTA_COMMIT;
+
 const shortDate = (date: Date): string => date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 const shortTime = (date: Date): string => date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 
@@ -72,9 +75,10 @@ export const useAppUpdate = () => {
     }
   };
 
-  const { createdAt } = updates.currentlyRunning;
+  const { createdAt, isEmbeddedLaunch } = updates.currentlyRunning;
   const nativeVersion = Application.nativeApplicationVersion ?? "?";
-  const version = createdAt ? `${nativeVersion} · ${shortDate(createdAt)}` : nativeVersion;
+  const commit = isEmbeddedLaunch ? undefined : UPDATE_COMMIT;
+  const version = [nativeVersion, commit, createdAt && shortDate(createdAt)].filter(Boolean).join(" · ");
   const lastChecked = updates.lastCheckForUpdateTimeSinceRestart;
 
   return {
