@@ -1,3 +1,5 @@
+import { PixelRatio } from "react-native";
+
 export type ThemeMode = "light" | "dark" | "system";
 
 export const ACCENTS = {
@@ -104,3 +106,10 @@ export const FONTS = {
 
 /** Minimum touch target; the design uses 44pt circles and 56pt rows/buttons. */
 export const TAP = { min: 44, row: 56, button: 56 } as const;
+
+/**
+ * Height for list separators drawn as absolutely positioned views. Exactly one physical pixel can round
+ * to zero when a row ends on a half pixel (60 dp is 157.5 px at 2.625x), which made lines vanish at
+ * random; 1.5 px always rounds to one or two.
+ */
+export const SEPARATOR_HEIGHT = 1.5 / PixelRatio.get();

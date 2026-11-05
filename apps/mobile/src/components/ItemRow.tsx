@@ -5,7 +5,7 @@ import Animated, { LayoutAnimationConfig, useAnimatedStyle, useSharedValue, with
 import { usePrefs } from "@/data/prefs";
 import { SPRING_POP } from "@/theme/motion";
 import { useTheme } from "@/theme/ThemeProvider";
-import { FONTS, TAP } from "@/theme/tokens";
+import { FONTS, SEPARATOR_HEIGHT, TAP } from "@/theme/tokens";
 import { GroupFill, GroupTile, useGroupTone } from "./GroupBadge";
 import { Icon } from "./Icon";
 import { HOLD_MS, PRESS_DELAY_MS, Tap, haptic } from "./Tap";
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     left: ROW_INSET,
     right: ROW_INSET,
     bottom: 0,
-    height: StyleSheet.hairlineWidth,
+    height: SEPARATOR_HEIGHT,
   },
   checkTarget: {
     width: TAP.row - 12,

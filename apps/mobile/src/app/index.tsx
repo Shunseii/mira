@@ -48,7 +48,7 @@ import { updateSession, useSession } from "@/data/session";
 import { setExpandOrigin, useOriginHidden } from "@/lib/expandOrigin";
 import { ROW_LAYOUT } from "@/theme/motion";
 import { useTheme } from "@/theme/ThemeProvider";
-import { FONTS } from "@/theme/tokens";
+import { FONTS, SEPARATOR_HEIGHT } from "@/theme/tokens";
 
 /** Rows glide to their new place; no fades or bounce, so adding and editing stay calm. */
 /** Right-edge strip (px) where a touch belongs to the grip in reorder mode. */
@@ -238,8 +238,9 @@ const SectionHeader = ({
           accessibilityHint={collapsed ? "Shows them" : "Hides them"}
           pressScale={0.99}
           onPress={onToggleChecked}
-          style={[styles.groupHeader, styles.priorityHeader, { borderBottomColor: colors.line }]}
+          style={[styles.groupHeader, styles.priorityHeader]}
         >
+          <View pointerEvents="none" style={[styles.headerLine, { backgroundColor: colors.line }]} />
           <Text variant="eyebrow" color="ink2">
             {row.title}
           </Text>
@@ -257,7 +258,8 @@ const SectionHeader = ({
   if (row.priority) {
     return (
       <View style={styles.headerInset}>
-        <View style={[styles.groupHeader, styles.priorityHeader, { borderBottomColor: colors.line }]}>
+        <View style={[styles.groupHeader, styles.priorityHeader]}>
+          <View pointerEvents="none" style={[styles.headerLine, { backgroundColor: colors.line }]} />
           <Text variant="eyebrow" color="ink2">
             {row.title}
           </Text>
@@ -270,7 +272,8 @@ const SectionHeader = ({
   }
   return (
     <View style={styles.headerInset}>
-      <View style={[styles.groupHeader, { borderBottomColor: colors.line }]}>
+      <View style={styles.groupHeader}>
+        <View pointerEvents="none" style={[styles.headerLine, { backgroundColor: colors.line }]} />
         {row.group ? <GroupChip group={row.group} name={row.title} /> : null}
         {done ? (
           <Icon name="check" size={14} color={colors.ink3} />
@@ -697,8 +700,13 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingTop: 20,
     paddingBottom: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
+  /**
+   * Drawn over the header rather than as a border: a hairline border adds a fraction of a pixel to each
+   * header's height, and By group's many headers pushed the rows below onto fractional positions where
+   * Android clipped their separators and the last row's bottom.
+   */
+  headerLine: { position: "absolute", left: 0, right: 0, bottom: 0, height: SEPARATOR_HEIGHT },
   checkAll: {
     width: 44,
     height: 40,

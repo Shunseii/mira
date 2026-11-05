@@ -1,5 +1,5 @@
 import { memo, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { PixelRatio, StyleSheet, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
 /** Superellipse exponent for the corners; 4 gives a soft, iOS-like curve. */
@@ -55,6 +55,12 @@ export const squirclePath = ({
 };
 
 /**
+ * Strokes sit this much further inside the shape. Drawn right at the edge, Android lost the last
+ * pixel row or column of the outline on some sizes (the selected Arrange list card's bottom edge).
+ */
+const STROKE_EDGE_GAP = 1 / PixelRatio.get();
+
+/**
  * A filled (and optionally outlined) squircle behind a view's content; the parent should have
  * no background or border of its own. Pass `size` when it's known up front; otherwise it measures
  * itself, showing a plain rounded rect for that first frame. Android shadows still follow the
@@ -75,7 +81,7 @@ export const SquircleFill = memo(
   }) => {
     const [measured, setMeasured] = useState<{ width: number; height: number }>();
     const frame = size ?? measured;
-    const inset = stroke ? stroke.width / 2 : 0;
+    const inset = stroke ? stroke.width / 2 + STROKE_EDGE_GAP : 0;
     return (
       <View
         pointerEvents="none"
@@ -86,13 +92,22 @@ export const SquircleFill = memo(
         onLayout={size ? undefined : (event) => setMeasured({ width: event.nativeEvent.layout.width, height: event.nativeEvent.layout.height })}
       >
         {frame ? (
-          <Svg width={frame.width} height={frame.height}>
+          // A measured shape always fills its parent: the parent can end up a pixel or so taller than its
+          // last onLayout (seen on a Samsung phone, cutting off the selected Arrange list card's bottom
+          // edge), so the path is stretched to fit via the viewBox, keeping the stroke width.
+          <Svg
+            width={size ? size.width : "100%"}
+            height={size ? size.height : "100%"}
+            viewBox={`0 0 ${frame.width} ${frame.height}`}
+            preserveAspectRatio="none"
+          >
             <Path
               d={squirclePath({ width: frame.width - inset * 2, height: frame.height - inset * 2, radius: Math.max(0, radius - inset) })}
               transform={inset ? `translate(${inset} ${inset})` : undefined}
               fill={color}
               stroke={stroke?.color}
               strokeWidth={stroke?.width}
+              vectorEffect="non-scaling-stroke"
             />
           </Svg>
         ) : null}
