@@ -35,6 +35,7 @@ import { SQUIRCLE_SHADOW_RADIUS, SquircleFill } from "@/components/Squircle";
 import { GripIcon, ItemRow, ROW_INSET } from "@/components/ItemRow";
 import { ListTopBar, MonthTitle } from "@/components/ListHeader";
 import { MonthSheet } from "@/components/MonthSheet";
+import { UpdateSheet } from "@/components/UpdateReady";
 import type { SheetRef } from "@/components/Sheet";
 import { Screen } from "@/components/Screen";
 import { SwipeToDelete } from "@/components/SwipeToDelete";
@@ -395,6 +396,7 @@ export default function ListScreen() {
   const [reorderMode, setReorderMode] = useState(false);
   const monthSheet = useRef<SheetRef>(null);
   const viewSheet = useRef<SheetRef>(null);
+  const updateSheet = useRef<SheetRef>(null);
   const { listView, checkedItems, checkedCollapsed } = usePrefs();
 
   const view = useStoreQuery(
@@ -540,6 +542,7 @@ export default function ListScreen() {
         <ListTopBar
           onSettings={() => router.push("/settings")}
           onSyncPill={() => (status === "unauthorized" ? updateSession({ password: null }) : household.nudge())}
+          onUpdatePill={() => updateSheet.current?.present()}
         />
         <MonthTitle
           month={month}
@@ -645,6 +648,7 @@ export default function ListScreen() {
           startReordering();
         }}
       />
+      <UpdateSheet ref={updateSheet} />
     </Screen>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import Animated, { ZoomIn } from "react-native-reanimated";
 import { Avatar } from "@/components/Avatar";
+import { Button } from "@/components/Button";
 import { Icon, type IconName } from "@/components/Icon";
 import { GroupTile } from "@/components/GroupBadge";
 import { GroupLine } from "@/components/ItemRow";
@@ -12,13 +13,14 @@ import { Tap } from "@/components/Tap";
 import { Text } from "@/components/Text";
 import { TOGGLE_SLIDE_MS, Toggle } from "@/components/Toggle";
 import { useCurrentMonth, useCurrentUser, useStoreQuery } from "@/data/HouseholdProvider";
+import { useAppUpdate, type UpdateStatus } from "@/data/appUpdate";
 import { setPrefs, usePrefs, type CheckedItems, type GroupLabel } from "@/data/prefs";
 import { displayHost } from "@/data/server";
 import { updateSession, useSession } from "@/data/session";
 import { goBack } from "@/lib/navigation";
 import { useAppearanceTransition } from "@/theme/AppearanceTransition";
 import { useTheme } from "@/theme/ThemeProvider";
-import { ACCENTS, buildPalette, type AccentName, type ThemeMode } from "@/theme/tokens";
+import { ACCENTS, buildPalette, FONTS, type AccentName, type ThemeMode } from "@/theme/tokens";
 import { SquircleFill } from "@/components/Squircle";
 
 /** Lets the toggle finish sliding before the pref change re-renders the app (e.g. re-sorting the list behind this screen). */
@@ -210,24 +212,29 @@ const Swatch = ({ name }: { name: AccentName }) => {
   );
 };
 
-const HouseholdRow = ({
+type RowTone = "default" | "action" | "danger";
+
+const SettingsRow = ({
   icon,
   label,
   value,
   onPress,
-  danger,
+  tone = "default",
+  disabled,
 }: {
   icon: IconName;
   label: string;
   value?: string;
   onPress?: () => void;
-  danger?: boolean;
+  tone?: RowTone;
+  disabled?: boolean;
 }) => {
   const { colors } = useTheme();
+  const toneColor = tone === "danger" ? "danger" : tone === "action" ? "accent" : "ink";
   const content = (
     <>
-      <Icon name={icon} size={18} color={danger ? colors.danger : colors.ink2} />
-      <Text variant="body" color={danger ? "danger" : "ink"} style={styles.flex}>
+      <Icon name={icon} size={18} color={tone === "default" ? colors.ink2 : colors[toneColor]} />
+      <Text variant={tone === "action" ? "bodyStrong" : "body"} color={toneColor} style={styles.flex}>
         {label}
       </Text>
       {value ? (
@@ -235,16 +242,74 @@ const HouseholdRow = ({
           {value}
         </Text>
       ) : null}
-      {onPress && !danger ? <Icon name="chevron-right" size={18} color={colors.ink3} /> : null}
+      {onPress && tone === "default" ? <Icon name="chevron-right" size={18} color={colors.ink3} /> : null}
     </>
   );
   const rowStyle = [styles.householdRow, { borderBottomColor: colors.line }];
   return onPress ? (
-    <Tap accessibilityRole="button" pressScale={0.99} onPress={onPress} style={rowStyle}>
+    <Tap accessibilityRole="button" pressScale={0.99} onPress={onPress} disabled={disabled} style={rowStyle}>
       {content}
     </Tap>
   ) : (
     <View style={rowStyle}>{content}</View>
+  );
+};
+
+const UPDATE_STATUS_ROWS: Record<Exclude<UpdateStatus, "ready">, { icon: IconName; label: string }> = {
+  idle: { icon: "circle-check", label: "Up to date" },
+  checking: { icon: "refresh-cw", label: "Checking for updates…" },
+  downloading: { icon: "refresh-cw", label: "Downloading update…" },
+  failed: { icon: "cloud-off", label: "Couldn't check for updates" },
+};
+
+/** Downloaded update waiting for a restart; replaces the status rows. */
+const UpdateCard = ({ restarting, onRestart }: { restarting: boolean; onRestart: () => void }) => {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.updateCard}>
+      <SquircleFill radius={16} color={colors.accentSoft} />
+      <View style={styles.updateCardTop}>
+        <View style={[styles.updateIconTile, { backgroundColor: colors.accent }]}>
+          <Icon name="refresh-cw" size={20} color={colors.onAccent} />
+        </View>
+        <View style={styles.updateCardText}>
+          <Text variant="option" style={styles.updateCardTitle}>
+            Update ready
+          </Text>
+          <Text variant="caption" color="ink2" style={styles.updateCardBody}>
+            Downloaded in the background. Restart to use it now, or it&apos;ll apply the next time you open Mira.
+          </Text>
+        </View>
+      </View>
+      <Button label="Restart now" onPress={onRestart} busy={restarting} style={styles.updateButton} />
+    </View>
+  );
+};
+
+const AppSection = () => {
+  const update = useAppUpdate();
+  const statusRow = update.status === "ready" ? undefined : UPDATE_STATUS_ROWS[update.status];
+  const busy = update.status === "checking" || update.status === "downloading";
+  return (
+    <>
+      <Text variant="eyebrow" color="ink2" style={styles.section}>
+        App
+      </Text>
+      {update.ready ? <UpdateCard restarting={update.restarting} onRestart={() => void update.restart()} /> : null}
+      <View>
+        <SettingsRow icon="smartphone" label="Version" value={update.version} />
+        {update.enabled && statusRow ? (
+          <>
+            <SettingsRow
+              icon={statusRow.icon}
+              label={statusRow.label}
+              value={update.status === "failed" ? "Try again later" : busy ? undefined : update.lastCheckedLabel}
+            />
+            <SettingsRow icon="refresh-cw" label="Check for updates" tone="action" disabled={busy} onPress={() => void update.check()} />
+          </>
+        ) : null}
+      </View>
+    </>
   );
 };
 
@@ -332,19 +397,21 @@ export default function Settings() {
           <GroupLabelTile value="icon" label="Icon only" />
         </View>
 
+        <AppSection />
+
         <Text variant="eyebrow" color="ink2" style={styles.section}>
           Household
         </Text>
         <View>
-          <HouseholdRow icon="server" label="Server" value={displayHost(serverUrl)} />
-          <HouseholdRow icon="users-round" label="People" value={people.join(", ")} />
-          <HouseholdRow
+          <SettingsRow icon="server" label="Server" value={displayHost(serverUrl)} />
+          <SettingsRow icon="users-round" label="People" value={people.join(", ")} />
+          <SettingsRow
             icon="tags"
             label="Groups"
             value={`${groupCount} group${groupCount === 1 ? "" : "s"}`}
             onPress={() => router.push("/groups")}
           />
-          <HouseholdRow icon="log-out" label="Sign out of this phone" danger onPress={() => updateSession({ password: null, userId: null })} />
+          <SettingsRow icon="log-out" label="Sign out of this phone" tone="danger" onPress={() => updateSession({ password: null, userId: null })} />
         </View>
       </ScrollView>
     </Screen>
@@ -381,4 +448,11 @@ const styles = StyleSheet.create({
   swatch: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
   householdRow: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: StyleSheet.hairlineWidth },
   rowValue: { maxWidth: "50%" },
+  updateCard: { padding: 16, gap: 14 },
+  updateCardTop: { flexDirection: "row", gap: 12 },
+  updateIconTile: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  updateCardText: { flex: 1, gap: 3 },
+  updateCardTitle: { fontFamily: FONTS.bodyBold },
+  updateCardBody: { fontSize: 14, lineHeight: 19 },
+  updateButton: { height: 44 },
 });

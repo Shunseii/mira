@@ -1,18 +1,19 @@
 import { monthName, monthYear, type MonthKey } from "@mira/shared";
 import { StyleSheet, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+import { useAppUpdate } from "@/data/appUpdate";
 import { useHouseholdState } from "@/data/HouseholdProvider";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS } from "@/theme/tokens";
 import { Icon } from "./Icon";
 import { Tap } from "./Tap";
 import { Text } from "./Text";
+import { UpdatePill } from "./UpdateReady";
 
-/** "Offline · 3 to sync" — only shown when not connected. */
+/** "Offline · 3 to sync", for when not connected. */
 const SyncPill = ({ onPress }: { onPress: () => void }) => {
   const { colors } = useTheme();
   const { status, pending } = useHouseholdState();
-  if (status === "online" || status === "connecting") return null;
   const unauthorized = status === "unauthorized";
   return (
     <Animated.View entering={FadeIn} exiting={FadeOut}>
@@ -36,16 +37,27 @@ const SyncPill = ({ onPress }: { onPress: () => void }) => {
   );
 };
 
-/** Wordmark, sync status and settings. Sits above the month title. */
-export const ListTopBar = ({ onSettings, onSyncPill }: { onSettings: () => void; onSyncPill: () => void }) => {
+/** Wordmark, sync status or a ready update (sync wins), and settings. Sits above the month title. */
+export const ListTopBar = ({
+  onSettings,
+  onSyncPill,
+  onUpdatePill,
+}: {
+  onSettings: () => void;
+  onSyncPill: () => void;
+  onUpdatePill: () => void;
+}) => {
   const { colors } = useTheme();
+  const { status } = useHouseholdState();
+  const { ready: updateReady } = useAppUpdate();
+  const syncProblem = status !== "online" && status !== "connecting";
   return (
     <View style={styles.topRow}>
       <Text variant="wordmark" color="accent">
         ميرة
       </Text>
       <View style={styles.topRight}>
-        <SyncPill onPress={onSyncPill} />
+        {syncProblem ? <SyncPill onPress={onSyncPill} /> : updateReady ? <UpdatePill onPress={onUpdatePill} /> : null}
         <Tap accessibilityRole="button" accessibilityLabel="Settings" onPress={onSettings} style={styles.settings}>
           <Icon name="settings-2" size={22} color={colors.ink2} />
         </Tap>

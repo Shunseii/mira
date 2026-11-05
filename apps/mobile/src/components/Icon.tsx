@@ -10,6 +10,7 @@ import ChevronLeft from "lucide-react-native/icons/chevron-left";
 import ChevronRight from "lucide-react-native/icons/chevron-right";
 import ChevronsUpDown from "lucide-react-native/icons/chevrons-up-down";
 import CircleCheck from "lucide-react-native/icons/circle-check";
+import Clock3 from "lucide-react-native/icons/clock-3";
 import CloudOff from "lucide-react-native/icons/cloud-off";
 import CloudUpload from "lucide-react-native/icons/cloud-upload";
 import Eye from "lucide-react-native/icons/eye";
@@ -23,10 +24,12 @@ import LogOut from "lucide-react-native/icons/log-out";
 import Minus from "lucide-react-native/icons/minus";
 import Pencil from "lucide-react-native/icons/pencil";
 import Plus from "lucide-react-native/icons/plus";
+import RefreshCw from "lucide-react-native/icons/refresh-cw";
 import Search from "lucide-react-native/icons/search";
 import Server from "lucide-react-native/icons/server";
 import Settings2 from "lucide-react-native/icons/settings-2";
 import ShoppingBasket from "lucide-react-native/icons/shopping-basket";
+import Smartphone from "lucide-react-native/icons/smartphone";
 import Tags from "lucide-react-native/icons/tags";
 import Trash2 from "lucide-react-native/icons/trash";
 import UserRoundPlus from "lucide-react-native/icons/user-round-plus";
@@ -46,6 +49,7 @@ export const ICONS = {
   "chevron-right": ChevronRight,
   "chevrons-up-down": ChevronsUpDown,
   "circle-check": CircleCheck,
+  "clock-3": Clock3,
   "cloud-off": CloudOff,
   "cloud-upload": CloudUpload,
   eye: Eye,
@@ -59,10 +63,12 @@ export const ICONS = {
   minus: Minus,
   pencil: Pencil,
   plus: Plus,
+  "refresh-cw": RefreshCw,
   search: Search,
   server: Server,
   "settings-2": Settings2,
   "shopping-basket": ShoppingBasket,
+  smartphone: Smartphone,
   tags: Tags,
   "trash-2": Trash2,
   "user-round-plus": UserRoundPlus,
