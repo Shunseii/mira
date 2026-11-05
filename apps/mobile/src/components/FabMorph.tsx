@@ -41,8 +41,11 @@ const CONTENT_WIDTH = 360;
 const CONTENT_HEIGHT = 64;
 /** The last keyboard height seen on this device, so the morph can head for the button's final spot from the first frame. */
 const KEYBOARD_HEIGHT_KEY = "mira.keyboardHeight";
-/** If no keyboard has started by then (e.g. a hardware keyboard), aim back at the button's resting spot. */
-const KEYBOARD_WAIT_MS = 800;
+/**
+ * If no keyboard has started by then (e.g. a hardware keyboard), aim back at the button's resting spot.
+ * Leaves room for Add item's last focus retry (600 ms) to bring the keyboard up.
+ */
+const KEYBOARD_WAIT_MS = 1200;
 
 const rememberedKeyboardHeight = (): number => {
   const stored = Number(deviceStorage.get(KEYBOARD_HEIGHT_KEY));
@@ -140,10 +143,17 @@ export const FabMorph = ({
 
   useKeyboardHandler(
     {
-      onStart: () => {
+      onStart: (event) => {
         "worklet";
         keyboardStarted.set(true);
         keyboardMoving.set(true);
+        // onStart already knows where the keyboard will end up, so head there now and rise with it. Some
+        // keyboards (Samsung's) send no frame-by-frame updates, so waiting for onEnd meant the keyboard
+        // covered the button first and only then pushed it up. Also covers a remembered height that's off.
+        if (closing.get() || event.height <= 0) return;
+        const settled = -event.height + opened;
+        if (Math.abs(settled - lift.get()) >= 1) lift.set(withSpring(settled, SPRING_SNAPPY));
+        scheduleOnRN(rememberKeyboardHeight, event.height);
       },
       onEnd: (event) => {
         "worklet";
@@ -241,11 +251,16 @@ export const FabMorph = ({
     const aim = closing.value ? liveLift : Math.min(lift.value, liveLift);
     const end = to ? { ...to, y: to.y + aim } : origin;
     const mix = (from: number, until: number) => interpolate(p, [0, 1], [from, until], Extrapolation.CLAMP);
+    const height = mix(origin.height, end.height);
+    // Mid-flight, stay above the keyboard's live top edge: a keyboard that starts early (a quick re-open)
+    // rises faster than the shape and would otherwise cover it until the shape caught up.
+    const keyboardUp = keyboard.height.value < 0;
+    const aboveKeyboard = to && keyboardUp && !closing.value ? to.y + liveLift + to.height - height : Number.POSITIVE_INFINITY;
     return {
       x: mix(origin.x, end.x),
-      y: mix(origin.y, end.y),
+      y: Math.min(mix(origin.y, end.y), aboveKeyboard),
       width: mix(origin.width, end.width),
-      height: mix(origin.height, end.height),
+      height,
       radius: mix(insideSquircle(origin), insideSquircle({ width: end.width, height: end.height, radius })),
       endX: end.x,
       endY: end.y,

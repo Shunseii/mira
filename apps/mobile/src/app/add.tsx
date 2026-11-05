@@ -14,7 +14,7 @@ import {
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ScrollView, StyleSheet, TextInput, View } from "react-native";
-import { KeyboardAwareScrollView, KeyboardController, KeyboardStickyView } from "react-native-keyboard-controller";
+import { KeyboardAwareScrollView, KeyboardController, KeyboardEvents, KeyboardStickyView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition } from "react-native-reanimated";
 import { BUTTON_RADIUS, Button, IconButton } from "@/components/Button";
@@ -60,8 +60,11 @@ const UsualChip = ({ usual, onPress }: { usual: Usual; onPress: () => void }) =>
   );
 };
 
-/** When to check the keyboard came up after opening, and ask again if it didn't. */
-const KEYBOARD_RETRY_MS = [250, 600];
+/**
+ * When to check the keyboard came up after opening, and ask again if it didn't. Late enough that a
+ * keyboard still on its way has started (asking again earlier cancels it mid-rise).
+ */
+const KEYBOARD_RETRY_MS = [600];
 
 export default function AddItem() {
   const { colors } = useTheme();
@@ -88,16 +91,24 @@ export default function AddItem() {
 
   // The name field autoFocuses so the keyboard rises while the screen grows out of the + button. Android
   // sometimes drops that first keyboard request while the new screen's window is still taking focus, so ask
-  // again until it's up.
+  // again, but only if no keyboard has started rising: isVisible() is false until the animation ends, and
+  // re-focusing then cancels the keyboard mid-rise and starts it over.
   useEffect(() => {
+    let keyboardStarted = KeyboardController.isVisible();
+    const started = KeyboardEvents.addListener("keyboardWillShow", () => {
+      keyboardStarted = true;
+    });
     const retries = KEYBOARD_RETRY_MS.map((delay) =>
       setTimeout(() => {
-        if (KeyboardController.isVisible()) return;
+        if (keyboardStarted || KeyboardController.isVisible()) return;
         nameRef.current?.blur();
         nameRef.current?.focus();
       }, delay),
     );
-    return () => retries.forEach(clearTimeout);
+    return () => {
+      started.remove();
+      retries.forEach(clearTimeout);
+    };
   }, []);
 
   const chips = useStoreQuery((store) => usuals({ store, month, query: name, limit: 8 }), [month, name]);
