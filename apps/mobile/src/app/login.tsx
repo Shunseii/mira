@@ -1,4 +1,4 @@
-import { createUser, liveUsers, type User } from "@mira/shared";
+import { createUser, liveUsers, sendsPasswordUnencrypted, type User } from "@mira/shared";
 import { useState, type ReactNode } from "react";
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
@@ -99,6 +99,7 @@ const ServerStep = () => {
 };
 
 const PasswordStep = ({ serverUrl }: { serverUrl: string }) => {
+  const unencrypted = sendsPasswordUnencrypted(serverUrl);
   const { colors } = useTheme();
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -130,7 +131,11 @@ const PasswordStep = ({ serverUrl }: { serverUrl: string }) => {
       <Hero step={1} title="Household password" />
       <View style={styles.hostChip}>
         <SquircleFill radius={14} color={colors.surface2} />
-        <Icon name="circle-check" size={16} color={colors.accent} />
+        {unencrypted ? (
+          <Icon name="lock-keyhole-open" size={16} color={colors.danger} />
+        ) : (
+          <Icon name="circle-check" size={16} color={colors.accent} />
+        )}
         <Text variant="secondary" style={styles.flex} numberOfLines={1}>
           {displayHost(serverUrl)}
         </Text>
@@ -140,6 +145,12 @@ const PasswordStep = ({ serverUrl }: { serverUrl: string }) => {
           </Text>
         </Tap>
       </View>
+      {unencrypted ? (
+        <Text variant="caption" accessibilityRole="alert" style={{ color: colors.danger }}>
+          This address isn&apos;t encrypted (http://), and it isn&apos;t on your home network. Anyone between you and the
+          server could read the household password. Ask whoever runs the server for an https:// address.
+        </Text>
+      ) : null}
       <Field
         label="Password"
         icon="lock-keyhole"

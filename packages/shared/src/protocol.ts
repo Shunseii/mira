@@ -86,3 +86,38 @@ export const passwordFromProtocols = (protocols: Iterable<string>): string | und
   }
   return undefined;
 };
+
+const PRIVATE_IPV4: readonly (readonly [number, number, number])[] = [
+  // [first octet, second octet from, second octet to]
+  [10, 0, 255],
+  [127, 0, 255],
+  [169, 254, 254],
+  [172, 16, 31],
+  [192, 168, 168],
+  // 100.64.0.0/10: carrier-grade NAT, which is where Tailscale gives out addresses.
+  [100, 64, 127],
+];
+
+/** Names that only resolve inside a home network or a tailnet (whose traffic WireGuard already encrypts). */
+const LOCAL_NAME = /(^localhost$|\.localhost$|\.local$|\.lan$|\.home$|\.home\.arpa$|\.internal$|\.ts\.net$|^[^.]+$)/i;
+
+const isLocalHost = (host: string): boolean => {
+  const ipv6 = host.match(/^\[(.+)\]$/)?.[1]?.toLowerCase();
+  if (ipv6 !== undefined) return ipv6 === "::1" || /^f[cd]/.test(ipv6) || /^fe[89ab]/.test(ipv6);
+  const octets = host.match(/^(\d{1,3})\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/);
+  if (octets) {
+    const first = Number(octets[1]);
+    const second = Number(octets[2]);
+    return PRIVATE_IPV4.some(([a, from, to]) => first === a && second >= from && second <= to);
+  }
+  return LOCAL_NAME.test(host);
+};
+
+/**
+ * True when the app would send the household password over plain http:// to a
+ * server outside the home network or tailnet, where anyone along the way can read it.
+ */
+export const sendsPasswordUnencrypted = (serverUrl: string): boolean => {
+  const match = serverUrl.trim().match(/^http:\/\/(\[[^\]]+\]|[^/:?#]+)/i);
+  return match?.[1] !== undefined && !isLocalHost(match[1]);
+};

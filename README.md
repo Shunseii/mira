@@ -62,6 +62,8 @@ docker compose up -d --build
 
 **HTTPS.** Plain `http://` works for the native apps on your LAN, but browsers only install the PWA and run it offline over HTTPS. Put Caddy or `tailscale serve` in front for that. Over plain HTTP the household password is also sent unencrypted on your network.
 
+**Backups, HTTPS setups and restoring:** see [docs/self-hosting.md](docs/self-hosting.md).
+
 ## OTA updates
 
 `expo-updates` is built in, with a fingerprint runtime version, so JS-only changes can ship without a rebuild. Before the first build, choose where updates come from:

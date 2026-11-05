@@ -1,6 +1,7 @@
 import { createMergeableStore, type MergeableStore } from "tinybase";
 import { describe, expect, it } from "vitest";
 import {
+  sendsPasswordUnencrypted,
   addItem,
   addableMonths,
   addMonths,
@@ -328,6 +329,38 @@ describe("add flow helpers", () => {
     addItem({ store, month: NOV, userId: "u1", item: { name: "Tomatoes", unit: "kg" }, now: midNov });
     expect(suggestUnits({ store, name: "TOMATOES " })).toEqual({ remembered: "kg", suggestions: ["kg", "bottle", "punnet"] });
     expect(customUnits({ store })).toEqual(["punnet"]);
+  });
+});
+
+describe("unencrypted server warning", () => {
+  it("warns for plain http to a public address or domain", () => {
+    for (const url of ["http://mira.example.com", "http://203.0.113.7:8787", "http://[2001:db8::1]:8787", "HTTP://Example.org/"]) {
+      expect(sendsPasswordUnencrypted(url), url).toBe(true);
+    }
+  });
+
+  it("stays quiet for https, home networks and tailnets", () => {
+    for (const url of [
+      "https://mira.example.com",
+      "http://192.168.18.9:8787",
+      "http://10.0.0.5",
+      "http://172.20.1.2:8787",
+      "http://100.125.200.91:8787",
+      "http://localhost:8787",
+      "http://pantry.local:8787",
+      "http://nas.home.arpa",
+      "http://box.tail1234.ts.net:8787",
+      "http://homeserver:8787",
+      "http://[::1]:8787",
+      "http://[fd7a:115c:a1e0::1]:8787",
+    ]) {
+      expect(sendsPasswordUnencrypted(url), url).toBe(false);
+    }
+  });
+
+  it("treats addresses next to a private range as public", () => {
+    expect(sendsPasswordUnencrypted("http://172.32.0.1")).toBe(true);
+    expect(sendsPasswordUnencrypted("http://100.128.0.1")).toBe(true);
   });
 });
 
