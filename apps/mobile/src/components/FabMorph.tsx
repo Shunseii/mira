@@ -1,7 +1,7 @@
 import { useNavigation } from "expo-router";
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Keyboard, StyleSheet, View } from "react-native";
-import { useKeyboardHandler, useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
+import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
 import Animated, {
   Extrapolation,
   ReduceMotion,
@@ -15,9 +15,8 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { deviceStorage } from "@/lib/deviceStorage";
 import { getExpandOrigin, setExpandOrigin, setOriginHidden } from "@/lib/expandOrigin";
-import { SPRING_SNAPPY, SPRING_TRAVEL } from "@/theme/motion";
+import { SPRING_TRAVEL } from "@/theme/motion";
 import { useTheme } from "@/theme/ThemeProvider";
 import { DISABLED_LABEL_OPACITY } from "./Button";
 import { Icon } from "./Icon";
@@ -39,21 +38,6 @@ const SHAPE_FADE = 0.2;
 /** The layer holding the + and the label; wide enough for the label. */
 const CONTENT_WIDTH = 360;
 const CONTENT_HEIGHT = 64;
-/** The last keyboard height seen on this device, so the morph can head for the button's final spot from the first frame. */
-const KEYBOARD_HEIGHT_KEY = "mira.keyboardHeight";
-/**
- * If no keyboard has started by then (e.g. a hardware keyboard), aim back at the button's resting spot.
- * Leaves room for Add item's last focus retry (600 ms) to bring the keyboard up.
- */
-const KEYBOARD_WAIT_MS = 1200;
-
-const rememberedKeyboardHeight = (): number => {
-  const stored = Number(deviceStorage.get(KEYBOARD_HEIGHT_KEY));
-  return Number.isFinite(stored) && stored > 0 ? stored : 0;
-};
-const rememberKeyboardHeight = (height: number) => {
-  if (Math.round(height) !== Math.round(rememberedKeyboardHeight())) deviceStorage.set(KEYBOARD_HEIGHT_KEY, String(Math.round(height)));
-};
 const CLOSED_AT = 0.01;
 
 type Rect = { x: number; y: number; width: number; height: number };
@@ -70,9 +54,9 @@ export type FabMorphTarget = {
  * The list's + button morphs into a screen's main button (Add item's "Add to <month>"),
  * while the page fades in behind it; closing reverses it back into the +.
  *
- * The button sits in a KeyboardStickyView and the keyboard rises during the morph, so
- * the morph's target follows the same live keyboard offset: it moves in one motion
- * and never lands and then gets pushed up.
+ * The morph heads for the button's spot with the keyboard closed. The button sits in a
+ * KeyboardStickyView, so as the keyboard rises the morph's target follows the same live
+ * keyboard offset: the keyboard pushes it up exactly as it pushes the real button.
  */
 export const FabMorph = ({
   label,
@@ -97,17 +81,6 @@ export const FabMorph = ({
   const keyboard = useReanimatedKeyboardAnimation();
   const progress = useSharedValue(0);
   const target = useSharedValue<Rect | null>(null);
-  // Where the button will end up: the name field is focused on open, so aim for the button's spot above
-  // the keyboard (its last known height) from the first frame and hold that aim while the keyboard
-  // animates, correcting once, gently, after it settles. Re-aiming on every keyboard event made the
-  // morph bob up and down as the keyboard (and its suggestion bar) settled.
-  const [predictedLift] = useState(() => {
-    const height = rememberedKeyboardHeight();
-    return height > 0 ? -height + stickyOffset.opened : stickyOffset.closed;
-  });
-  const lift = useSharedValue(predictedLift);
-  const keyboardMoving = useSharedValue(false);
-  const keyboardStarted = useSharedValue(false);
   const closing = useSharedValue(false);
   const overlayHidden = useSharedValue(false);
   const [landed, setLanded] = useState(!origin);
@@ -129,10 +102,6 @@ export const FabMorph = ({
 
   useEffect(() => {
     animateTo(1);
-    const noKeyboard = setTimeout(() => {
-      if (!keyboardStarted.get()) lift.set(withSpring(closed, SPRING_SNAPPY));
-    }, KEYBOARD_WAIT_MS);
-    return () => clearTimeout(noKeyboard);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once, on open
   }, []);
 
@@ -141,38 +110,9 @@ export const FabMorph = ({
     overlayHidden.set(landed);
   }, [landed, overlayHidden]);
 
-  useKeyboardHandler(
-    {
-      onStart: (event) => {
-        "worklet";
-        keyboardStarted.set(true);
-        keyboardMoving.set(true);
-        // onStart already knows where the keyboard will end up, so head there now and rise with it. Some
-        // keyboards (Samsung's) send no frame-by-frame updates, so waiting for onEnd meant the keyboard
-        // covered the button first and only then pushed it up. Also covers a remembered height that's off.
-        if (closing.get() || event.height <= 0) return;
-        const settled = -event.height + opened;
-        if (Math.abs(settled - lift.get()) >= 1) lift.set(withSpring(settled, SPRING_SNAPPY));
-        scheduleOnRN(rememberKeyboardHeight, event.height);
-      },
-      onEnd: (event) => {
-        "worklet";
-        keyboardMoving.set(false);
-        if (closing.get()) return;
-        const settled = event.height > 0 ? -event.height + opened : closed;
-        if (Math.abs(settled - lift.get()) >= 1) lift.set(withSpring(settled, SPRING_SNAPPY));
-        if (event.height > 0) scheduleOnRN(rememberKeyboardHeight, event.height);
-      },
-    },
-    [closed, opened],
-  );
-
-  // Hand over to the real button once the morph has landed and it sits where the keyboard put the button.
+  // Hand over to the real button once the morph has landed; both follow the same keyboard offset from then on.
   useAnimatedReaction(
-    () => {
-      const liveLift = keyboard.height.value + interpolate(keyboard.progress.value, [0, 1], [closed, opened]);
-      return !closing.value && progress.value >= LANDED_AT && !keyboardMoving.value && Math.abs(lift.value - liveLift) < 1;
-    },
+    () => !closing.value && progress.value >= LANDED_AT,
     (done, wasDone) => {
       if (done && !wasDone) scheduleOnRN(setLanded, true);
     },
@@ -247,9 +187,7 @@ export const FabMorph = ({
     const p = progress.value;
     const to = target.value;
     const liveLift = keyboard.height.value + interpolate(keyboard.progress.value, [0, 1], [closed, opened]);
-    // Opening: hold the aim, but never sit below the keyboard's live edge. Closing: ride the keyboard down.
-    const aim = closing.value ? liveLift : Math.min(lift.value, liveLift);
-    const end = to ? { ...to, y: to.y + aim } : origin;
+    const end = to ? { ...to, y: to.y + liveLift } : origin;
     const mix = (from: number, until: number) => interpolate(p, [0, 1], [from, until], Extrapolation.CLAMP);
     const height = mix(origin.height, end.height);
     // Mid-flight, stay above the keyboard's live top edge: a keyboard that starts early (a quick re-open)
