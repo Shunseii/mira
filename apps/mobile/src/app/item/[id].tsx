@@ -20,6 +20,7 @@ import { Icon } from "@/components/Icon";
 import { GroupValue, MonthValue, OptionRow, OptionTable, Stepper, parseQuantity } from "@/components/ItemOptions";
 import { GroupSheet } from "@/components/GroupSheet";
 import { MonthSheet } from "@/components/MonthSheet";
+import { NameField } from "@/components/NameField";
 import { Screen } from "@/components/Screen";
 import type { SheetRef } from "@/components/Sheet";
 import { Tap, haptic } from "@/components/Tap";
@@ -121,23 +122,7 @@ export default function ItemDetail() {
         </View>
 
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <View style={styles.titleBlock}>
-            {liveGroup ? (
-              <Text variant="eyebrow" color="ink2">
-                {liveGroup.name}
-              </Text>
-            ) : null}
-            <View style={styles.titleRow}>
-              <TextInput
-                value={draft.name}
-                onChangeText={(text) => patchDraft({ name: text })}
-                returnKeyType="done"
-                accessibilityLabel="Item name"
-                selectionColor={colors.accent}
-                style={[styles.titleInput, { color: colors.ink }]}
-              />
-            </View>
-          </View>
+          <NameField value={draft.name} onChangeText={(text) => patchDraft({ name: text })} returnKeyType="done" />
 
           <OptionTable>
             <OptionRow label="Quantity">
@@ -210,9 +195,6 @@ const styles = StyleSheet.create({
   backLabel: { fontSize: 15 },
   trash: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24, gap: 22 },
-  titleBlock: { gap: 4 },
-  titleRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  titleInput: { flexShrink: 1, fontFamily: FONTS.displayBold, fontSize: 30, lineHeight: 38, padding: 0, outlineWidth: 0 },
   noteBlock: { gap: 8 },
   note: {
     minHeight: 96,

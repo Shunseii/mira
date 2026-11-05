@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition } from "react-native-reanimated";
 import { BUTTON_RADIUS, Button, IconButton } from "@/components/Button";
 import { FabMorph } from "@/components/FabMorph";
+import { NameField } from "@/components/NameField";
 import { GroupSheet } from "@/components/GroupSheet";
 import { GroupValue, MonthValue, OptionRow, OptionTable, Stepper } from "@/components/ItemOptions";
 import { MonthSheet } from "@/components/MonthSheet";
@@ -33,7 +34,6 @@ import { useSession } from "@/data/session";
 import { goBack } from "@/lib/navigation";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS } from "@/theme/tokens";
-import { SquircleFill } from "@/components/Squircle";
 
 const UsualChip = ({ usual, onPress }: { usual: Usual; onPress: () => void }) => {
   const { colors } = useTheme();
@@ -187,27 +187,16 @@ export default function AddItem() {
             </View>
 
             <KeyboardAwareScrollView bottomOffset={FOOTER_SPACE} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-              <Tap accessibilityRole="none" pressScale={1} onPress={() => nameRef.current?.focus()} style={styles.hero}>
-                <SquircleFill radius={20} color={colors.accentSoft} />
-                <Text variant="label" color="accent">
-                  Item name
-                </Text>
-                <TextInput
-                  ref={nameRef}
-                  autoFocus
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="e.g. Tomatoes"
-                  numberOfLines={1}
-                  placeholderTextColor={colors.ink3}
-                  selectionColor={colors.accent}
-                  cursorColor={colors.accent}
-                  returnKeyType="done"
-                  submitBehavior="submit"
-                  onSubmitEditing={() => add({ andClose: false })}
-                  autoCapitalize="sentences"
-                  style={[styles.heroInput, { color: colors.ink }]}
-                />
+              <NameField
+                ref={nameRef}
+                autoFocus
+                value={name}
+                onChangeText={setName}
+                placeholder="e.g. Tomatoes"
+                returnKeyType="done"
+                submitBehavior="submit"
+                onSubmitEditing={() => add({ andClose: false })}
+              >
                 {justAdded ? (
                   <Animated.View entering={FadeInDown.duration(160)} exiting={FadeOut} style={styles.added}>
                     <Text variant="caption" color="accent">
@@ -215,7 +204,7 @@ export default function AddItem() {
                     </Text>
                   </Animated.View>
                 ) : null}
-              </Tap>
+              </NameField>
 
               {chips.length > 0 ? (
                 <Animated.View entering={FadeIn} layout={LinearTransition} style={styles.usuals}>
@@ -303,8 +292,6 @@ const styles = StyleSheet.create({
   nav: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 4 },
   navSpacer: { width: 44 },
   content: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 24, gap: 18 },
-  hero: { paddingHorizontal: 20, paddingVertical: 16, gap: 2 },
-  heroInput: { fontFamily: FONTS.displayBold, fontSize: 36, lineHeight: 44, minHeight: 48, padding: 0, outlineWidth: 0 },
   added: { paddingTop: 4 },
   usuals: { gap: 10 },
   usualRow: { gap: 8, paddingRight: 20 },
