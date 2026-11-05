@@ -22,3 +22,6 @@ export const SPRING_POP = { mass: 1, stiffness: 520, damping: 26 } as const;
 
 /** Rows moving to a new place in a list: checked items sinking, neighbours closing the gap. */
 export const ROW_LAYOUT = LinearTransition.springify().mass(SPRING_SNAPPY.mass).stiffness(SPRING_SNAPPY.stiffness).damping(SPRING_SNAPPY.damping);
+
+/** The launch glide of the splash wordmark into the header: unhurried, no overshoot, settles in about 400 ms. */
+export const SPRING_GLIDE = { mass: 1, stiffness: 150, damping: 23 } as const;

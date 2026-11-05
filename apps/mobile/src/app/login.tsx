@@ -10,6 +10,7 @@ import { Icon } from "@/components/Icon";
 import { Screen } from "@/components/Screen";
 import { Tap, haptic } from "@/components/Tap";
 import { Text } from "@/components/Text";
+import { Wordmark } from "@/components/Wordmark";
 import { useHouseholdState, useOptionalHousehold, useStoreQuery } from "@/data/HouseholdProvider";
 import { checkPassword, displayHost, findServer } from "@/data/server";
 import { loginStep, updateSession, useSession } from "@/data/session";
@@ -36,9 +37,7 @@ const StepDots = ({ index }: { index: 0 | 1 }) => {
 
 const Hero = ({ step, title }: { step: 0 | 1; title: string }) => (
   <View style={styles.hero}>
-    <Text variant="wordmarkHero" color="accent" style={styles.wordmarkEnd}>
-      ميرة
-    </Text>
+    <Wordmark variant="wordmarkHero" style={styles.wordmarkEnd} />
     <View style={styles.heroBottom}>
       <StepDots index={step} />
       <Text variant="heading">{title}</Text>
@@ -229,9 +228,7 @@ const WhoStep = () => {
   return (
     <Animated.View entering={FadeInRight} exiting={FadeOutLeft} style={styles.flex}>
       <ScrollView contentContainerStyle={styles.whoContent} keyboardShouldPersistTaps="handled">
-        <Text variant="wordmark" color="accent" style={styles.wordmarkEnd}>
-          ميرة
-        </Text>
+        <Wordmark style={styles.wordmarkEnd} />
         <Text variant="heading">Who's this?</Text>
         {waiting ? (
           <View style={styles.waiting}>

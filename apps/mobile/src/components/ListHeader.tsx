@@ -8,6 +8,7 @@ import { FONTS } from "@/theme/tokens";
 import { Icon } from "./Icon";
 import { Tap } from "./Tap";
 import { Text } from "./Text";
+import { Wordmark } from "./Wordmark";
 import { UpdatePill } from "./UpdateReady";
 
 /** "Offline · 3 to sync", for when not connected. */
@@ -53,9 +54,7 @@ export const ListTopBar = ({
   const syncProblem = status !== "online" && status !== "connecting";
   return (
     <View style={styles.topRow}>
-      <Text variant="wordmark" color="accent">
-        ميرة
-      </Text>
+      <Wordmark />
       <View style={styles.topRight}>
         {syncProblem ? <SyncPill onPress={onSyncPill} /> : updateReady ? <UpdatePill onPress={onUpdatePill} /> : null}
         <Tap accessibilityRole="button" accessibilityLabel="Settings" onPress={onSettings} style={styles.settings}>

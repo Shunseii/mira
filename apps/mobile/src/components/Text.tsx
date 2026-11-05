@@ -1,3 +1,4 @@
+import type { Ref } from "react";
 import { Text as RNText, type TextProps, type TextStyle } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS, type Palette } from "@/theme/tokens";
@@ -24,6 +25,7 @@ export type TextVariant = keyof typeof VARIANTS;
 export type MiraTextProps = TextProps & {
   variant?: TextVariant;
   color?: keyof Palette;
+  ref?: Ref<RNText>;
 };
 
 export const Text = ({ variant = "body", color = "ink", style, ...rest }: MiraTextProps) => {
