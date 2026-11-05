@@ -24,3 +24,5 @@ secrets:
 
 volumes:
   mira-data:
+    # Without a fixed name Compose prefixes the project (mira_mira-data); the docs and the Quadlet use mira-data.
+    name: mira-data
