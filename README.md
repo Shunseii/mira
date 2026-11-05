@@ -2,6 +2,13 @@
 
 A self-hosted, offline-first household grocery list. One list per month, shared live between everyone in the house. The list works fully offline and syncs when the server is reachable.
 
+<p align="center">
+  <img src="docs/screenshots/list.png" width="24%" alt="This month's list, grouped into sections like Fruits &amp; vegetables and Dairy &amp; eggs" />
+  <img src="docs/screenshots/add.png" width="24%" alt="Adding an item, with a suggestion from your usual items" />
+  <img src="docs/screenshots/arrange.png" width="24%" alt="Arranging the list by group or by priority" />
+  <img src="docs/screenshots/dark.png" width="24%" alt="The list in dark mode" />
+</p>
+
 ```
 apps/mobile    Expo app (iOS, Android, and the web PWA from the same code)
 apps/server    Node sync server: TinyBase WebSocket sync + SQLite, also serves the PWA
