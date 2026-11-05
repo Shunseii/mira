@@ -48,7 +48,9 @@ export const Tap = ({
   return (
     <AnimatedPressable
       {...rest}
-      disabled={disabled}
+      // Always a boolean: going from true to undefined drops the disabled accessibility state instead of clearing
+      // it, and Android leaves the view disabled, so only its children (the label) still take touches.
+      disabled={disabled === true}
       unstable_pressDelay={unstable_pressDelay}
       hitSlop={rest.hitSlop ?? 4}
       onPressIn={(event) => {
