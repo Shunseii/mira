@@ -57,12 +57,14 @@ export const IconButton = ({
   label,
   filled = true,
   disabled,
+  feedback = "select",
 }: {
   icon: IconName;
   onPress: () => void;
   label: string;
   filled?: boolean;
   disabled?: boolean;
+  feedback?: "select" | "none";
 }) => {
   const { colors } = useTheme();
   return (
@@ -71,7 +73,7 @@ export const IconButton = ({
       accessibilityLabel={label}
       onPress={onPress}
       disabled={disabled}
-      feedback="select"
+      feedback={feedback}
       pressScale={0.9}
       style={[styles.icon, filled ? { backgroundColor: colors.surface2 } : null]}
     >

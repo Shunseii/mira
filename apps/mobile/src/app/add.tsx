@@ -181,7 +181,7 @@ export default function AddItem() {
         <Screen>
           <View style={styles.flex}>
             <View style={styles.nav}>
-              <IconButton icon="arrow-left" label="Back" onPress={() => goBack()} />
+              <IconButton icon="arrow-left" label="Back" feedback="none" onPress={() => goBack()} />
               <Text variant="title">Add item</Text>
               <View style={styles.navSpacer} />
             </View>
