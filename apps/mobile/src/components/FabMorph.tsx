@@ -85,6 +85,7 @@ export const FabMorph = ({
   const overlayHidden = useSharedValue(false);
   const [landed, setLanded] = useState(!origin);
   const buttonRef = useRef<View>(null);
+  const rootRef = useRef<View>(null);
   const [targetSize, setTargetSize] = useState<{ width: number; height: number }>();
   const finishClosing = useRef<() => void>(undefined);
   const finish = () => finishClosing.current?.();
@@ -158,16 +159,19 @@ export const FabMorph = ({
     [navigation],
   );
 
-  // Where the button sits with the keyboard closed: its window position minus the sticky view's current lift
-  // and the page's rise. Measured once; later layouts happen mid-animation and would shift the target.
-  const onLayout = () =>
-    buttonRef.current?.measureInWindow((x, y, width, height) => {
+  // Where the button sits with the keyboard closed and the page at rest. Its layout position, not its
+  // on-screen one: that would include the page's rise and the keyboard lift, and the lift isn't applied
+  // yet when the keyboard is already rising as the screen mounts (a quick re-open), which put the target a
+  // keyboard's height too low. Measured once; later layouts happen mid-animation.
+  const onLayout = () => {
+    const root = rootRef.current;
+    if (!root || target.get()) return;
+    buttonRef.current?.measureLayout(root, (x, y, width, height) => {
       if (target.get()) return;
-      const liveLift = keyboard.height.get() + interpolate(keyboard.progress.get(), [0, 1], [closed, opened]);
-      const rise = interpolate(progress.get(), [0, 1], [RISE, 0], Extrapolation.CLAMP);
-      target.set({ x, y: y - liveLift - rise, width, height });
+      target.set({ x, y, width, height });
       setTargetSize({ width, height });
     });
+  };
 
   const pageStyle = useAnimatedStyle(() => {
     const p = progress.value;
@@ -234,7 +238,7 @@ export const FabMorph = ({
   }));
 
   return (
-    <View style={StyleSheet.absoluteFill}>
+    <View ref={rootRef} style={StyleSheet.absoluteFill}>
       {/* Cached as a texture while it fades, so Android doesn't redraw the whole page every frame. */}
       <Animated.View renderToHardwareTextureAndroid={!landed} style={[StyleSheet.absoluteFill, pageStyle]}>
         {children({ ref: buttonRef, onLayout, visible: landed })}
