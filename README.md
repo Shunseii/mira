@@ -8,6 +8,10 @@ A self-hosted, offline-first household grocery list. One list per month, shared 
   <img src="docs/screenshots/arrange.png" width="24%" alt="Arranging the list by group or by priority" />
   <img src="docs/screenshots/dark.png" width="24%" alt="The list in dark mode" />
 </p>
+<p align="center">
+  <img src="docs/screenshots/settings.png" width="24%" alt="Settings: appearance, accent color, units and where checked items go" />
+  <img src="docs/screenshots/groups.png" width="24%" alt="Groups, each with its own icon and color, in the order they appear in the list" />
+</p>
 
 ```
 apps/mobile    Expo app (iOS, Android, and the web PWA from the same code)
