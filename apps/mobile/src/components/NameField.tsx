@@ -1,4 +1,4 @@
-import { useRef, type ReactNode, type Ref } from "react";
+import { useRef, type Ref } from "react";
 import { StyleSheet, TextInput, type TextInputProps } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS } from "@/theme/tokens";
@@ -12,12 +12,9 @@ import { Text } from "./Text";
  */
 export const NameField = ({
   ref,
-  children,
   ...input
 }: Omit<TextInputProps, "style"> & {
   ref?: Ref<TextInput>;
-  /** Shown under the input, inside the card (e.g. Add item's "Added … ✓"). */
-  children?: ReactNode;
 }) => {
   const { colors } = useTheme();
   const own = useRef<TextInput>(null);
@@ -43,7 +40,6 @@ export const NameField = ({
         {...input}
         style={[styles.input, { color: colors.ink }]}
       />
-      {children}
     </Tap>
   );
 };

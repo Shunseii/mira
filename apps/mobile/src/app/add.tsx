@@ -1,10 +1,10 @@
 import {
   addItem,
+  deleteItems,
   formatQuantity,
   isMonthKey,
   lastItemNamed,
   monthName,
-  monthShortName,
   readGroup,
   suggestUnits,
   usuals,
@@ -16,7 +16,7 @@ import { useEffect, useRef, useState } from "react";
 import { ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { KeyboardAwareScrollView, KeyboardController, KeyboardEvents, KeyboardStickyView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition } from "react-native-reanimated";
+import Animated, { FadeIn, LinearTransition } from "react-native-reanimated";
 import { BUTTON_RADIUS, Button, IconButton } from "@/components/Button";
 import { FabMorph } from "@/components/FabMorph";
 import { NameField } from "@/components/NameField";
@@ -27,9 +27,11 @@ import { Screen } from "@/components/Screen";
 import type { SheetRef } from "@/components/Sheet";
 import { Tap, haptic } from "@/components/Tap";
 import { Text } from "@/components/Text";
+import { Toggle } from "@/components/Toggle";
+import { UNDO_MS, UndoSnackbar } from "@/components/UndoSnackbar";
 import { UnitSheet, UnitSuggestions } from "@/components/UnitPicker";
 import { useCurrentMonth, useHousehold, useStoreQuery } from "@/data/HouseholdProvider";
-import { usePrefs } from "@/data/prefs";
+import { setPrefs, usePrefs } from "@/data/prefs";
 import { useSession } from "@/data/session";
 import { goBack } from "@/lib/navigation";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -80,12 +82,13 @@ export default function AddItem() {
   const [unitTouched, setUnitTouched] = useState(false);
   const [groupId, setGroupId] = useState<string | undefined>();
   const [groupTouched, setGroupTouched] = useState(false);
-  const [justAdded, setJustAdded] = useState<string>();
+  const [justAdded, setJustAdded] = useState<{ itemId: string; message: string }>();
+  const [footerHeight, setFooterHeight] = useState(0);
   const nameRef = useRef<TextInput>(null);
   const groupSheet = useRef<SheetRef>(null);
   const monthSheet = useRef<SheetRef>(null);
   const unitSheet = useRef<SheetRef>(null);
-  const { showUnits } = usePrefs();
+  const { showUnits, keepAdding } = usePrefs();
   const addLabel = `Add to ${monthName(month)}`;
   const stickyOffset = { closed: 0, opened: insets.bottom };
 
@@ -137,8 +140,9 @@ export default function AddItem() {
       nameRef.current?.focus();
       return;
     }
-    household.write((store) =>
-      addItem({
+    let itemId: string | undefined;
+    household.write((store) => {
+      itemId = addItem({
         store,
         month,
         userId,
@@ -148,21 +152,21 @@ export default function AddItem() {
           unit: showUnits ? unit : undefined,
           groupId: group && !group.deletedAt ? groupId : undefined,
         },
-      }),
-    );
+      });
+    });
     haptic("success");
     if (andClose) {
       goBack();
       return;
     }
-    setJustAdded(trimmed);
+    if (itemId) setJustAdded({ itemId, message: `Added ${trimmed} to ${monthName(month)}` });
     reset();
     nameRef.current?.focus();
   };
 
   useEffect(() => {
     if (!justAdded) return;
-    const timer = setTimeout(() => setJustAdded(undefined), 1600);
+    const timer = setTimeout(() => setJustAdded(undefined), UNDO_MS);
     return () => clearTimeout(timer);
   }, [justAdded]);
 
@@ -196,15 +200,7 @@ export default function AddItem() {
                 returnKeyType="done"
                 submitBehavior="submit"
                 onSubmitEditing={() => add({ andClose: false })}
-              >
-                {justAdded ? (
-                  <Animated.View entering={FadeInDown.duration(160)} exiting={FadeOut} style={styles.added}>
-                    <Text variant="caption" color="accent">
-                      Added {justAdded} to {monthShortName(month)} ✓
-                    </Text>
-                  </Animated.View>
-                ) : null}
-              </NameField>
+              />
 
               {chips.length > 0 ? (
                 <Animated.View entering={FadeIn} layout={LinearTransition} style={styles.usuals}>
@@ -250,11 +246,37 @@ export default function AddItem() {
               </OptionTable>
             </KeyboardAwareScrollView>
 
+            {/* Its own layer riding the keyboard just above the footer: as the footer's child it would sit
+                outside the footer's bounds, where Android doesn't deliver touches (Undo wouldn't work). */}
+            {justAdded ? (
+              <KeyboardStickyView offset={stickyOffset} style={[styles.snackbarLayer, { bottom: footerHeight + 8 }]}>
+                <UndoSnackbar
+                  message={justAdded.message}
+                  onUndo={() => {
+                    household.write((store) => deleteItems({ store, itemIds: [justAdded.itemId] }));
+                    setJustAdded(undefined);
+                  }}
+                  onDismiss={() => setJustAdded(undefined)}
+                  bottom={0}
+                />
+              </KeyboardStickyView>
+            ) : null}
+
             {/* Pinned to the top of the keyboard while it's open, so Add is always reachable. */}
-            <KeyboardStickyView offset={stickyOffset} style={[styles.footer, { backgroundColor: colors.bg }]}>
+            <KeyboardStickyView
+              offset={stickyOffset}
+              onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
+              style={[styles.footer, { backgroundColor: colors.bg }]}
+            >
               {/* The list's + morphs into this button; it shows once the morph lands on it. */}
+              <View style={styles.keepAdding}>
+                <Text variant="body" color="ink2">
+                  Add more
+                </Text>
+                <Toggle label="Add more" value={keepAdding} onChange={(value) => setPrefs({ keepAdding: value })} />
+              </View>
               <View ref={morphTarget.ref} onLayout={morphTarget.onLayout} collapsable={false} style={morphTarget.visible ? null : styles.hidden}>
-                <Button label={addLabel} onPress={() => add({ andClose: true })} disabled={!name.trim()} />
+                <Button label={addLabel} onPress={() => add({ andClose: !keepAdding })} disabled={!name.trim()} />
               </View>
             </KeyboardStickyView>
           </View>
@@ -285,17 +307,18 @@ export default function AddItem() {
 }
 
 /** Room kept under the last form row so it never ends up behind the pinned button. */
-const FOOTER_SPACE = 88;
+const FOOTER_SPACE = 136;
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   nav: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 4 },
   navSpacer: { width: 44 },
   content: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 24, gap: 18 },
-  added: { paddingTop: 4 },
   usuals: { gap: 10 },
   usualRow: { gap: 8, paddingRight: 20 },
   usual: { height: 42, borderRadius: 21, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 6 },
-  footer: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
+  snackbarLayer: { position: "absolute", left: 0, right: 0, height: 52 },
+  footer: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, gap: 8 },
+  keepAdding: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 40, paddingHorizontal: 4 },
   hidden: { opacity: 0 },
 });
