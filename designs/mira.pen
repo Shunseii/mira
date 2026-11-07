@@ -2120,7 +2120,7 @@
                     {
                       "type": "frame",
                       "id": "S17Cl",
-                      "name": "Add More Toggle",
+                      "name": "Add Multiple Toggle",
                       "width": 44,
                       "height": 44,
                       "fill": "$surface-2",
@@ -2131,7 +2131,7 @@
                         {
                           "type": "icon",
                           "id": "relmu",
-                          "name": "Add More Icon",
+                          "name": "Add Multiple Icon",
                           "width": 20,
                           "height": 20,
                           "icon": "list-plus",
@@ -5442,7 +5442,7 @@
                           "fill": "$ink-3",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "With Add more on, the next item goes in the same group",
+                          "content": "With Add multiple on, the next item goes in the same group",
                           "lineHeight": 1.35,
                           "fontFamily": "$font-body",
                           "fontSize": 14,
@@ -6002,7 +6002,7 @@
                     {
                       "type": "frame",
                       "id": "gmZVx",
-                      "name": "Add More Toggle",
+                      "name": "Add Multiple Toggle",
                       "width": 44,
                       "height": 44,
                       "fill": "$surface-2",
@@ -6013,7 +6013,7 @@
                         {
                           "type": "icon",
                           "id": "jkGcK",
-                          "name": "Add More Icon",
+                          "name": "Add Multiple Icon",
                           "width": 20,
                           "height": 20,
                           "icon": "list-plus",
@@ -7400,7 +7400,7 @@
                     {
                       "type": "frame",
                       "id": "wIwe1",
-                      "name": "Add More Toggle",
+                      "name": "Add Multiple Toggle",
                       "width": 44,
                       "height": 44,
                       "fill": "$surface-2",
@@ -7411,7 +7411,7 @@
                         {
                           "type": "icon",
                           "id": "WmFfn",
-                          "name": "Add More Icon",
+                          "name": "Add Multiple Icon",
                           "width": 20,
                           "height": 20,
                           "icon": "list-plus",
@@ -12029,7 +12029,7 @@
                     {
                       "type": "frame",
                       "id": "TbUdp",
-                      "name": "Add More Toggle",
+                      "name": "Add Multiple Toggle",
                       "width": 44,
                       "height": 44,
                       "fill": "$surface-2",
@@ -12040,7 +12040,7 @@
                         {
                           "type": "icon",
                           "id": "wR7Dg",
-                          "name": "Add More Icon",
+                          "name": "Add Multiple Icon",
                           "width": 20,
                           "height": 20,
                           "icon": "list-plus",
@@ -13988,7 +13988,7 @@
                     {
                       "type": "frame",
                       "id": "JKu9A",
-                      "name": "Add More Toggle",
+                      "name": "Add Multiple Toggle",
                       "width": 44,
                       "height": 44,
                       "fill": "$surface-2",
@@ -13999,7 +13999,7 @@
                         {
                           "type": "icon",
                           "id": "f3it46",
-                          "name": "Add More Icon",
+                          "name": "Add Multiple Icon",
                           "width": 20,
                           "height": 20,
                           "icon": "list-plus",
@@ -27171,7 +27171,7 @@
                           "fill": "$ink-3",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "With Add more on, the next item goes in the same group",
+                          "content": "With Add multiple on, the next item goes in the same group",
                           "lineHeight": 1.35,
                           "fontFamily": "$font-body",
                           "fontSize": 14,
@@ -28780,7 +28780,7 @@
                           "fill": "$ink-3",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "With Add more on, the next item goes in the same group",
+                          "content": "With Add multiple on, the next item goes in the same group",
                           "lineHeight": 1.35,
                           "fontFamily": "$font-body",
                           "fontSize": 14,
