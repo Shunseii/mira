@@ -18,6 +18,7 @@ import EyeOff from "lucide-react-native/icons/eye-off";
 import GripVertical from "lucide-react-native/icons/grip-vertical";
 import Layers from "lucide-react-native/icons/layers";
 import ListOrdered from "lucide-react-native/icons/list-ordered";
+import ListPlus from "lucide-react-native/icons/list-plus";
 import LockKeyhole from "lucide-react-native/icons/lock-keyhole";
 import LockKeyholeOpen from "lucide-react-native/icons/lock-keyhole-open";
 import LogOut from "lucide-react-native/icons/log-out";
@@ -57,6 +58,7 @@ export const ICONS = {
   "grip-vertical": GripVertical,
   layers: Layers,
   "list-ordered": ListOrdered,
+  "list-plus": ListPlus,
   "lock-keyhole": LockKeyhole,
   "lock-keyhole-open": LockKeyholeOpen,
   "log-out": LogOut,

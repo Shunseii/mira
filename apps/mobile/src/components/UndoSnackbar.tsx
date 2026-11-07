@@ -14,7 +14,7 @@ export const UNDO_MS = 5000;
 const DISMISS_DISTANCE = 0.3;
 const DISMISS_VELOCITY = 800;
 
-/** "Deleted X · Undo" bar floating above the bottom of the screen. Swipe it sideways to dismiss it early. */
+/** "Deleted X · Undo" bar floating above the bottom of the screen. Swipe it sideways to dismiss it early. Without `onUndo` it's a plain notice. */
 export const UndoSnackbar = ({
   message,
   onUndo,
@@ -23,7 +23,7 @@ export const UndoSnackbar = ({
   undoHaptic = "none",
 }: {
   message: string;
-  onUndo: () => void;
+  onUndo?: () => void;
   onDismiss: () => void;
   bottom: number;
   undoHaptic?: "light" | "none";
@@ -69,14 +69,16 @@ export const UndoSnackbar = ({
           style={[styles.snackbar, swipeStyle]}
         >
           <SquircleFill radius={14} color={colors.ink} />
-          <Text variant="secondary" numberOfLines={1} style={[styles.message, { color: colors.bg }]}>
+          <Text variant="secondary" numberOfLines={1} style={[styles.message, { color: colors.bg }, onUndo ? null : styles.noticeOnly]}>
             {message}
           </Text>
-          <Tap accessibilityRole="button" feedback={undoHaptic} onPress={onUndo} style={styles.undo}>
-            <Text variant="bodyStrong" style={{ color: colors.accentSoft }}>
-              Undo
-            </Text>
-          </Tap>
+          {onUndo ? (
+            <Tap accessibilityRole="button" feedback={undoHaptic} onPress={onUndo} style={styles.undo}>
+              <Text variant="bodyStrong" style={{ color: colors.accentSoft }}>
+                Undo
+              </Text>
+            </Tap>
+          ) : null}
         </Animated.View>
       </GestureDetector>
     </Animated.View>
@@ -93,5 +95,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   message: { flex: 1 },
+  noticeOnly: { paddingVertical: 16, paddingRight: 16 },
   undo: { height: 52, paddingHorizontal: 16, justifyContent: "center" },
 });

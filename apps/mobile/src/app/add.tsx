@@ -21,7 +21,6 @@ import { BUTTON_RADIUS, Button, IconButton } from "@/components/Button";
 import { FabMorph } from "@/components/FabMorph";
 import { NameField } from "@/components/NameField";
 import { GroupSheet } from "@/components/GroupSheet";
-import { Icon } from "@/components/Icon";
 import { GroupValue, MonthValue, OptionRow, OptionTable, Stepper } from "@/components/ItemOptions";
 import { MonthSheet } from "@/components/MonthSheet";
 import { Screen } from "@/components/Screen";
@@ -36,31 +35,6 @@ import { useSession } from "@/data/session";
 import { goBack } from "@/lib/navigation";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS } from "@/theme/tokens";
-
-/** "Add more": on, Add clears the form for the next item instead of going back to the list. */
-const KeepAddingChip = ({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) => {
-  const { colors } = useTheme();
-  return (
-    <Tap
-      accessibilityRole="switch"
-      accessibilityLabel="Add more"
-      accessibilityState={{ checked: on }}
-      feedback="select"
-      pressScale={0.94}
-      hitSlop={6}
-      onPress={() => onChange(!on)}
-      style={[
-        styles.keepAddingChip,
-        on ? { backgroundColor: colors.accentSoft, borderColor: colors.accentSoft, paddingLeft: 10 } : { borderColor: colors.line },
-      ]}
-    >
-      {on ? <Icon name="check" size={16} strokeWidth={2.5} color={colors.accent} /> : null}
-      <Text variant="label" color={on ? "accent" : "ink2"}>
-        Add more
-      </Text>
-    </Tap>
-  );
-};
 
 const UsualChip = ({ usual, onPress }: { usual: Usual; onPress: () => void }) => {
   const { colors } = useTheme();
@@ -107,14 +81,15 @@ export default function AddItem() {
   const [unitTouched, setUnitTouched] = useState(false);
   const [groupId, setGroupId] = useState<string | undefined>();
   const [groupTouched, setGroupTouched] = useState(false);
-  const [justAdded, setJustAdded] = useState<{ itemId: string; message: string }>();
+  /** The snackbar: "Added X" with Undo for that item, or a plain note. */
+  const [notice, setNotice] = useState<{ message: string; undoItemId?: string }>();
   const [footerHeight, setFooterHeight] = useState(0);
   const nameRef = useRef<TextInput>(null);
   const groupSheet = useRef<SheetRef>(null);
   const monthSheet = useRef<SheetRef>(null);
   const unitSheet = useRef<SheetRef>(null);
   const { showUnits, keepAdding, keepGroup } = usePrefs();
-  const addLabel = `Add to ${monthName(month)}`;
+  const addLabel = keepAdding ? "Add & next" : `Add to ${monthName(month)}`;
   const stickyOffset = { closed: 0, opened: insets.bottom };
 
   // The name field autoFocuses so the keyboard rises while the screen grows out of the + button. Android
@@ -189,16 +164,16 @@ export default function AddItem() {
       goBack();
       return;
     }
-    if (itemId) setJustAdded({ itemId, message: `Added ${trimmed} to ${monthName(month)}` });
+    if (itemId) setNotice({ undoItemId: itemId, message: `Added ${trimmed} to ${monthName(month)}` });
     reset();
     nameRef.current?.focus();
   };
 
   useEffect(() => {
-    if (!justAdded) return;
-    const timer = setTimeout(() => setJustAdded(undefined), UNDO_MS);
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(undefined), UNDO_MS);
     return () => clearTimeout(timer);
-  }, [justAdded]);
+  }, [notice]);
 
   const useUsual = (usual: Usual) => {
     setName(usual.name);
@@ -216,10 +191,18 @@ export default function AddItem() {
           <View style={styles.flex}>
             <View style={styles.nav}>
               <IconButton icon="arrow-left" label="Back" feedback="none" onPress={() => goBack()} />
-              <View pointerEvents="none" style={styles.navTitle}>
-                <Text variant="title">Add item</Text>
-              </View>
-              <KeepAddingChip on={keepAdding} onChange={(value) => setPrefs({ keepAdding: value })} />
+              <Text variant="title">Add item</Text>
+              <IconButton
+                icon="list-plus"
+                label="Add more"
+                on={keepAdding}
+                onPress={() => {
+                  setPrefs({ keepAdding: !keepAdding });
+                  setNotice({
+                    message: keepAdding ? "Add more off: back to the list after adding" : "Add more on: stays open for the next item",
+                  });
+                }}
+              />
             </View>
 
             <KeyboardAwareScrollView bottomOffset={FOOTER_SPACE} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -253,6 +236,9 @@ export default function AddItem() {
               ) : null}
 
               <OptionTable>
+                <OptionRow label="Group">
+                  <GroupValue group={group && !group.deletedAt ? group : undefined} onPress={() => groupSheet.current?.present()} />
+                </OptionRow>
                 <OptionRow label="Quantity">
                   <Stepper value={qty} onChange={setQty} />
                 </OptionRow>
@@ -269,9 +255,6 @@ export default function AddItem() {
                     />
                   </OptionRow>
                 ) : null}
-                <OptionRow label="Group">
-                  <GroupValue group={group && !group.deletedAt ? group : undefined} onPress={() => groupSheet.current?.present()} />
-                </OptionRow>
                 <OptionRow label="List">
                   <MonthValue month={month} onPress={() => monthSheet.current?.present()} />
                 </OptionRow>
@@ -280,15 +263,20 @@ export default function AddItem() {
 
             {/* Its own layer riding the keyboard just above the footer: as the footer's child it would sit
                 outside the footer's bounds, where Android doesn't deliver touches (Undo wouldn't work). */}
-            {justAdded ? (
+            {notice ? (
               <KeyboardStickyView offset={stickyOffset} style={[styles.snackbarLayer, { bottom: footerHeight + 8 }]}>
                 <UndoSnackbar
-                  message={justAdded.message}
-                  onUndo={() => {
-                    household.write((store) => deleteItems({ store, itemIds: [justAdded.itemId] }));
-                    setJustAdded(undefined);
-                  }}
-                  onDismiss={() => setJustAdded(undefined)}
+                  message={notice.message}
+                  onUndo={
+                    notice.undoItemId
+                      ? () => {
+                          const itemId = notice.undoItemId;
+                          if (itemId) household.write((store) => deleteItems({ store, itemIds: [itemId] }));
+                          setNotice(undefined);
+                        }
+                      : undefined
+                  }
+                  onDismiss={() => setNotice(undefined)}
                   bottom={0}
                 />
               </KeyboardStickyView>
@@ -338,13 +326,11 @@ const FOOTER_SPACE = 88;
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   nav: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 4 },
-  navTitle: { position: "absolute", top: 0, bottom: 0, left: 0, right: 0, alignItems: "center", justifyContent: "center" },
   content: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 24, gap: 18 },
   usuals: { gap: 10 },
   usualRow: { gap: 8, paddingRight: 20 },
   usual: { height: 42, borderRadius: 21, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 6 },
   snackbarLayer: { position: "absolute", left: 0, right: 0, height: 52 },
   footer: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
-  keepAddingChip: { height: 36, borderRadius: 18, borderWidth: 1, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 6 },
   hidden: { opacity: 0 },
 });

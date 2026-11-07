@@ -58,6 +58,7 @@ export const IconButton = ({
   filled = true,
   disabled,
   feedback = "select",
+  on,
 }: {
   icon: IconName;
   onPress: () => void;
@@ -65,19 +66,25 @@ export const IconButton = ({
   filled?: boolean;
   disabled?: boolean;
   feedback?: "select" | "none";
+  /** Makes it an on/off switch: accent while on. */
+  on?: boolean;
 }) => {
   const { colors } = useTheme();
+  const isSwitch = on !== undefined;
+  const background = on ? colors.accentSoft : filled ? colors.surface2 : undefined;
+  const iconColor = on ? colors.accent : filled ? colors.ink : colors.ink2;
   return (
     <Tap
-      accessibilityRole="button"
+      accessibilityRole={isSwitch ? "switch" : "button"}
+      accessibilityState={isSwitch ? { checked: on } : undefined}
       accessibilityLabel={label}
       onPress={onPress}
       disabled={disabled}
       feedback={feedback}
       pressScale={0.9}
-      style={[styles.icon, filled ? { backgroundColor: colors.surface2 } : null]}
+      style={[styles.icon, background ? { backgroundColor: background } : null]}
     >
-      <Icon name={icon} size={20} color={filled ? colors.ink : colors.ink2} />
+      <Icon name={icon} size={20} color={iconColor} />
     </Tap>
   );
 };
