@@ -125,6 +125,9 @@ export default function ItemDetail() {
           <NameField value={draft.name} onChangeText={(text) => patchDraft({ name: text })} returnKeyType="done" />
 
           <OptionTable>
+            <OptionRow label="Group">
+              <GroupValue group={liveGroup} onPress={() => groupSheet.current?.present()} />
+            </OptionRow>
             <OptionRow label="Quantity">
               <Stepper value={draft.qty} onChange={(next) => patchDraft({ qty: next })} />
             </OptionRow>
@@ -138,9 +141,6 @@ export default function ItemDetail() {
                 />
               </OptionRow>
             ) : null}
-            <OptionRow label="Group">
-              <GroupValue group={liveGroup} onPress={() => groupSheet.current?.present()} />
-            </OptionRow>
             <OptionRow label="List">
               <MonthValue month={draft.month} onPress={() => monthSheet.current?.present()} />
             </OptionRow>
