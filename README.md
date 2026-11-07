@@ -13,7 +13,7 @@ A self-hosted, offline-first household grocery list. One list per month, shared 
 - **One list per month.** Unbought items carry over.
 - **Shared live**, no accounts.
 - **Works offline**, syncs when it can.
-- **Quick to add.** Usuals, remembered units, "Add more".
+- **Quick to add.** Usuals, remembered units, "Add multiple".
 - **Groups** with icons and colors, sorted by group or priority.
 - **Themes.** Light, dark and six accent colors.
 - **Self-hosted** in one container ([deploy it](#deploy-the-server)), on Android, iOS and the web.
@@ -21,7 +21,7 @@ A self-hosted, offline-first household grocery list. One list per month, shared 
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/add-more.png" width="30%" alt="Add more: after adding Yogurt, a snackbar offers Undo and the form stays open in the same group" />
+  <img src="docs/screenshots/add-more.png" width="30%" alt="Add multiple: after adding Yogurt, a snackbar offers Undo and the form stays open in the same group" />
   <img src="docs/screenshots/groups.png" width="30%" alt="Groups, each with its own icon and color, in the order they appear in the list" />
   <img src="docs/screenshots/settings.png" width="30%" alt="Settings: appearance, accent color, units, Keep group and where checked items go" />
 </p>

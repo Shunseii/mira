@@ -89,7 +89,7 @@ export default function AddItem() {
   const monthSheet = useRef<SheetRef>(null);
   const unitSheet = useRef<SheetRef>(null);
   const { showUnits, keepAdding, keepGroup } = usePrefs();
-  const addLabel = keepAdding ? "Add & next" : `Add to ${monthName(month)}`;
+  const addLabel = `Add to ${monthName(month)}`;
   const stickyOffset = { closed: 0, opened: insets.bottom };
 
   // The name field autoFocuses so the keyboard rises while the screen grows out of the + button. Android
@@ -194,12 +194,12 @@ export default function AddItem() {
               <Text variant="title">Add item</Text>
               <IconButton
                 icon="list-plus"
-                label="Add more"
+                label="Add multiple"
                 on={keepAdding}
                 onPress={() => {
                   setPrefs({ keepAdding: !keepAdding });
                   setNotice({
-                    message: keepAdding ? "Add more off: back to the list after adding" : "Add more on: stays open for the next item",
+                    message: keepAdding ? "Add multiple off: back to the list after adding" : "Add multiple on: stays open for the next item",
                   });
                 }}
               />

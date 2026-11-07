@@ -377,7 +377,7 @@ export default function Settings() {
         />
         <PrefToggle
           label="Keep group"
-          description="With Add more on, the next item goes in the same group"
+          description="With Add multiple on, the next item goes in the same group"
           value={prefs.keepGroup}
           onChange={(value) => setPrefs({ keepGroup: value })}
         />
