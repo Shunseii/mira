@@ -375,6 +375,12 @@ export default function Settings() {
           value={prefs.showUnits}
           onChange={(value) => setPrefs({ showUnits: value })}
         />
+        <PrefToggle
+          label="Keep group"
+          description="With Add more on, the next item goes in the same group"
+          value={prefs.keepGroup}
+          onChange={(value) => setPrefs({ keepGroup: value })}
+        />
         <View style={styles.choiceText}>
           <Text variant="label">Checked items</Text>
           <Text variant="caption" color="ink2">

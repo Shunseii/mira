@@ -21,13 +21,13 @@ import { BUTTON_RADIUS, Button, IconButton } from "@/components/Button";
 import { FabMorph } from "@/components/FabMorph";
 import { NameField } from "@/components/NameField";
 import { GroupSheet } from "@/components/GroupSheet";
+import { Icon } from "@/components/Icon";
 import { GroupValue, MonthValue, OptionRow, OptionTable, Stepper } from "@/components/ItemOptions";
 import { MonthSheet } from "@/components/MonthSheet";
 import { Screen } from "@/components/Screen";
 import type { SheetRef } from "@/components/Sheet";
 import { Tap, haptic } from "@/components/Tap";
 import { Text } from "@/components/Text";
-import { Toggle } from "@/components/Toggle";
 import { UNDO_MS, UndoSnackbar } from "@/components/UndoSnackbar";
 import { UnitSheet, UnitSuggestions } from "@/components/UnitPicker";
 import { useCurrentMonth, useHousehold, useStoreQuery } from "@/data/HouseholdProvider";
@@ -36,6 +36,31 @@ import { useSession } from "@/data/session";
 import { goBack } from "@/lib/navigation";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS } from "@/theme/tokens";
+
+/** "Add more": on, Add clears the form for the next item instead of going back to the list. */
+const KeepAddingChip = ({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) => {
+  const { colors } = useTheme();
+  return (
+    <Tap
+      accessibilityRole="switch"
+      accessibilityLabel="Add more"
+      accessibilityState={{ checked: on }}
+      feedback="select"
+      pressScale={0.94}
+      hitSlop={6}
+      onPress={() => onChange(!on)}
+      style={[
+        styles.keepAddingChip,
+        on ? { backgroundColor: colors.accentSoft, borderColor: colors.accentSoft, paddingLeft: 10 } : { borderColor: colors.line },
+      ]}
+    >
+      {on ? <Icon name="check" size={16} strokeWidth={2.5} color={colors.accent} /> : null}
+      <Text variant="label" color={on ? "accent" : "ink2"}>
+        Add more
+      </Text>
+    </Tap>
+  );
+};
 
 const UsualChip = ({ usual, onPress }: { usual: Usual; onPress: () => void }) => {
   const { colors } = useTheme();
@@ -88,7 +113,7 @@ export default function AddItem() {
   const groupSheet = useRef<SheetRef>(null);
   const monthSheet = useRef<SheetRef>(null);
   const unitSheet = useRef<SheetRef>(null);
-  const { showUnits, keepAdding } = usePrefs();
+  const { showUnits, keepAdding, keepGroup } = usePrefs();
   const addLabel = `Add to ${monthName(month)}`;
   const stickyOffset = { closed: 0, opened: insets.bottom };
 
@@ -130,6 +155,11 @@ export default function AddItem() {
     setQty(undefined);
     setUnit(undefined);
     setUnitTouched(false);
+    if (keepGroup) {
+      // Counts as picked, so a remembered group for the next name doesn't replace it.
+      setGroupTouched(true);
+      return;
+    }
     setGroupId(undefined);
     setGroupTouched(false);
   };
@@ -186,8 +216,10 @@ export default function AddItem() {
           <View style={styles.flex}>
             <View style={styles.nav}>
               <IconButton icon="arrow-left" label="Back" feedback="none" onPress={() => goBack()} />
-              <Text variant="title">Add item</Text>
-              <View style={styles.navSpacer} />
+              <View pointerEvents="none" style={styles.navTitle}>
+                <Text variant="title">Add item</Text>
+              </View>
+              <KeepAddingChip on={keepAdding} onChange={(value) => setPrefs({ keepAdding: value })} />
             </View>
 
             <KeyboardAwareScrollView bottomOffset={FOOTER_SPACE} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -269,12 +301,6 @@ export default function AddItem() {
               style={[styles.footer, { backgroundColor: colors.bg }]}
             >
               {/* The list's + morphs into this button; it shows once the morph lands on it. */}
-              <View style={styles.keepAdding}>
-                <Text variant="body" color="ink2">
-                  Add more
-                </Text>
-                <Toggle label="Add more" value={keepAdding} onChange={(value) => setPrefs({ keepAdding: value })} />
-              </View>
               <View ref={morphTarget.ref} onLayout={morphTarget.onLayout} collapsable={false} style={morphTarget.visible ? null : styles.hidden}>
                 <Button label={addLabel} onPress={() => add({ andClose: !keepAdding })} disabled={!name.trim()} />
               </View>
@@ -307,18 +333,18 @@ export default function AddItem() {
 }
 
 /** Room kept under the last form row so it never ends up behind the pinned button. */
-const FOOTER_SPACE = 136;
+const FOOTER_SPACE = 88;
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   nav: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 4 },
-  navSpacer: { width: 44 },
+  navTitle: { position: "absolute", top: 0, bottom: 0, left: 0, right: 0, alignItems: "center", justifyContent: "center" },
   content: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 24, gap: 18 },
   usuals: { gap: 10 },
   usualRow: { gap: 8, paddingRight: 20 },
   usual: { height: 42, borderRadius: 21, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 6 },
   snackbarLayer: { position: "absolute", left: 0, right: 0, height: 52 },
-  footer: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, gap: 8 },
-  keepAdding: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 40, paddingHorizontal: 4 },
+  footer: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
+  keepAddingChip: { height: 36, borderRadius: 18, borderWidth: 1, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 6 },
   hidden: { opacity: 0 },
 });
