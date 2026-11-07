@@ -2119,10 +2119,26 @@
                     },
                     {
                       "type": "frame",
-                      "id": "KSahL",
-                      "name": "Nav Spacer",
+                      "id": "S17Cl",
+                      "name": "Add More Toggle",
                       "width": 44,
-                      "height": 44
+                      "height": 44,
+                      "fill": "$surface-2",
+                      "cornerRadius": 22,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "relmu",
+                          "name": "Add More Icon",
+                          "width": 20,
+                          "height": 20,
+                          "icon": "list-plus",
+                          "library": "lucide",
+                          "fill": "$ink"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -2373,6 +2389,77 @@
                   "children": [
                     {
                       "type": "frame",
+                      "id": "ezN6t",
+                      "name": "Group Option",
+                      "width": "fill_container",
+                      "height": 48,
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "ssJFg",
+                          "name": "Option Label",
+                          "fill": "$ink-2",
+                          "content": "Group",
+                          "fontFamily": "$font-body",
+                          "fontSize": 16,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "OHur5",
+                          "name": "Group Picker",
+                          "height": 36,
+                          "fill": "$g-produce-tint",
+                          "cornerRadius": 10,
+                          "gap": 6,
+                          "padding": [
+                            0,
+                            10
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "G41Tny",
+                              "name": "Group Icon",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "carrot",
+                              "library": "lucide",
+                              "fill": "$g-produce-text"
+                            },
+                            {
+                              "type": "text",
+                              "id": "MYU43",
+                              "name": "Group Value",
+                              "fill": "$g-produce-text",
+                              "content": "Produce",
+                              "fontFamily": "$font-body",
+                              "fontSize": 17,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "qvaXM",
+                              "name": "Picker Icon",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "chevrons-up-down",
+                              "library": "lucide",
+                              "fill": "$g-produce-text"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
                       "id": "ixAgb",
                       "name": "Quantity Option",
                       "width": "fill_container",
@@ -2517,77 +2604,6 @@
                           "ref": "dpu6T",
                           "name": "Unit Picker",
                           "width": "fit_content"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "ezN6t",
-                      "name": "Group Option",
-                      "width": "fill_container",
-                      "height": 48,
-                      "stroke": "$line",
-                      "strokeWidth": {
-                        "bottom": 1
-                      },
-                      "justifyContent": "space_between",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "ssJFg",
-                          "name": "Option Label",
-                          "fill": "$ink-2",
-                          "content": "Group",
-                          "fontFamily": "$font-body",
-                          "fontSize": 16,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "OHur5",
-                          "name": "Group Picker",
-                          "height": 36,
-                          "fill": "$g-produce-tint",
-                          "cornerRadius": 10,
-                          "gap": 6,
-                          "padding": [
-                            0,
-                            10
-                          ],
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "id": "G41Tny",
-                              "name": "Group Icon",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "carrot",
-                              "library": "lucide",
-                              "fill": "$g-produce-text"
-                            },
-                            {
-                              "type": "text",
-                              "id": "MYU43",
-                              "name": "Group Value",
-                              "fill": "$g-produce-text",
-                              "content": "Produce",
-                              "fontFamily": "$font-body",
-                              "fontSize": 17,
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "icon",
-                              "id": "qvaXM",
-                              "name": "Picker Icon",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "chevrons-up-down",
-                              "library": "lucide",
-                              "fill": "$g-produce-text"
-                            }
-                          ]
                         }
                       ]
                     },
@@ -3839,40 +3855,65 @@
             },
             {
               "type": "frame",
-              "id": "tVZsL",
-              "name": "Title Block",
+              "id": "UKorS",
+              "name": "Name Hero",
               "width": "fill_container",
-              "layout": "vertical",
-              "gap": 10,
+              "fill": "$accent-soft",
+              "cornerRadius": 20,
+              "gap": 16,
+              "padding": [
+                16,
+                20
+              ],
+              "alignItems": "center",
               "children": [
                 {
-                  "type": "text",
-                  "id": "o5m4s",
-                  "name": "Group",
-                  "fill": "$ink-2",
-                  "content": "PRODUCE",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "600",
-                  "letterSpacing": 1.4
-                },
-                {
                   "type": "frame",
-                  "id": "LzMwK",
-                  "name": "Title Row",
+                  "id": "KasLa",
+                  "name": "Name Field",
                   "width": "fill_container",
-                  "gap": 12,
-                  "alignItems": "center",
+                  "layout": "vertical",
+                  "gap": 2,
                   "children": [
                     {
                       "type": "text",
-                      "id": "JCmZF",
-                      "name": "Item Name",
-                      "fill": "$ink",
-                      "content": "Bananas",
-                      "fontFamily": "$font-display",
-                      "fontSize": 36,
-                      "fontWeight": "500"
+                      "id": "xDIfW",
+                      "name": "Name Label",
+                      "fill": "$accent",
+                      "content": "Item name",
+                      "fontFamily": "$font-body",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "AZAJT",
+                      "name": "Typed Row",
+                      "gap": 3,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "xIUrs",
+                          "name": "Typed",
+                          "fill": "$ink",
+                          "content": "Bananas",
+                          "fontFamily": "$font-display",
+                          "fontSize": 36,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "rectangle",
+                          "id": "rShHN",
+                          "x": 83,
+                          "y": 4,
+                          "name": "Caret",
+                          "enabled": false,
+                          "fill": "$accent",
+                          "width": 2.5,
+                          "height": 36
+                        }
+                      ]
                     }
                   ]
                 }
@@ -3889,6 +3930,77 @@
               },
               "layout": "vertical",
               "children": [
+                {
+                  "type": "frame",
+                  "id": "i9l7Sd",
+                  "name": "Group Row",
+                  "width": "fill_container",
+                  "height": 60,
+                  "stroke": "$line",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "LrWYK",
+                      "name": "Row Label",
+                      "fill": "$ink-2",
+                      "content": "Group",
+                      "fontFamily": "$font-body",
+                      "fontSize": 16,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "A4LBFu",
+                      "name": "Picker",
+                      "height": 36,
+                      "fill": "$g-produce-tint",
+                      "cornerRadius": 10,
+                      "gap": 6,
+                      "padding": [
+                        0,
+                        10
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "VDRkP",
+                          "name": "Group Icon",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "carrot",
+                          "library": "lucide",
+                          "fill": "$g-produce-text"
+                        },
+                        {
+                          "type": "text",
+                          "id": "t6y8n",
+                          "name": "Picker Value",
+                          "fill": "$g-produce-text",
+                          "content": "Produce",
+                          "fontFamily": "$font-body",
+                          "fontSize": 17,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "icon",
+                          "id": "HRle6",
+                          "name": "Picker Icon",
+                          "width": 16,
+                          "height": 16,
+                          "icon": "chevrons-up-down",
+                          "library": "lucide",
+                          "fill": "$g-produce-text"
+                        }
+                      ]
+                    }
+                  ]
+                },
                 {
                   "type": "frame",
                   "id": "mfrn9",
@@ -4049,77 +4161,6 @@
                           "content": "kg"
                         }
                       }
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "i9l7Sd",
-                  "name": "Group Row",
-                  "width": "fill_container",
-                  "height": 60,
-                  "stroke": "$line",
-                  "strokeWidth": {
-                    "bottom": 1
-                  },
-                  "justifyContent": "space_between",
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "type": "text",
-                      "id": "LrWYK",
-                      "name": "Row Label",
-                      "fill": "$ink-2",
-                      "content": "Group",
-                      "fontFamily": "$font-body",
-                      "fontSize": 16,
-                      "fontWeight": "normal"
-                    },
-                    {
-                      "type": "frame",
-                      "id": "A4LBFu",
-                      "name": "Picker",
-                      "height": 36,
-                      "fill": "$g-produce-tint",
-                      "cornerRadius": 10,
-                      "gap": 6,
-                      "padding": [
-                        0,
-                        10
-                      ],
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "icon",
-                          "id": "VDRkP",
-                          "name": "Group Icon",
-                          "width": 16,
-                          "height": 16,
-                          "icon": "carrot",
-                          "library": "lucide",
-                          "fill": "$g-produce-text"
-                        },
-                        {
-                          "type": "text",
-                          "id": "t6y8n",
-                          "name": "Picker Value",
-                          "fill": "$g-produce-text",
-                          "content": "Produce",
-                          "fontFamily": "$font-body",
-                          "fontSize": 17,
-                          "fontWeight": "600"
-                        },
-                        {
-                          "type": "icon",
-                          "id": "HRle6",
-                          "name": "Picker Icon",
-                          "width": 16,
-                          "height": 16,
-                          "icon": "chevrons-up-down",
-                          "library": "lucide",
-                          "fill": "$g-produce-text"
-                        }
-                      ]
                     }
                   ]
                 },
@@ -4317,7 +4358,7 @@
       "name": "Settings",
       "clip": true,
       "width": 393,
-      "height": 1256,
+      "height": 1338,
       "fill": "$bg",
       "layout": "vertical",
       "children": [
@@ -5370,6 +5411,81 @@
                 },
                 {
                   "type": "frame",
+                  "id": "uy7GJ",
+                  "name": "Keep group",
+                  "width": "fill_container",
+                  "gap": 16,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Er3gm",
+                      "name": "Keep Group Text",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "MOjef",
+                          "name": "Keep Group Label",
+                          "fill": "$ink",
+                          "content": "Keep group",
+                          "fontFamily": "$font-body",
+                          "fontSize": 16,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Jf1vH",
+                          "name": "Keep Group Note",
+                          "fill": "$ink-3",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "With Add more on, the next item goes in the same group",
+                          "lineHeight": 1.35,
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "x1dxds",
+                      "name": "Toggle",
+                      "width": 51,
+                      "height": 31,
+                      "fill": "$accent",
+                      "cornerRadius": 16,
+                      "padding": 2,
+                      "justifyContent": "end",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "Yy521",
+                          "name": "Knob",
+                          "fill": "#FFFFFF",
+                          "width": 27,
+                          "height": 27,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000026",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 3
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "tkroH",
                   "name": "Checked items to the end",
                   "width": "fill_container",
@@ -5885,10 +6001,26 @@
                     },
                     {
                       "type": "frame",
-                      "id": "xZGFc",
-                      "name": "Nav Spacer",
+                      "id": "gmZVx",
+                      "name": "Add More Toggle",
                       "width": 44,
-                      "height": 44
+                      "height": 44,
+                      "fill": "$surface-2",
+                      "cornerRadius": 22,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "jkGcK",
+                          "name": "Add More Icon",
+                          "width": 20,
+                          "height": 20,
+                          "icon": "list-plus",
+                          "library": "lucide",
+                          "fill": "$ink"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -6142,6 +6274,77 @@
                   "children": [
                     {
                       "type": "frame",
+                      "id": "CB99T",
+                      "name": "Group Option",
+                      "width": "fill_container",
+                      "height": 48,
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "VY6zo",
+                          "name": "Option Label",
+                          "fill": "$ink-2",
+                          "content": "Group",
+                          "fontFamily": "$font-body",
+                          "fontSize": 16,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "q6B0f",
+                          "name": "Group Picker",
+                          "height": 36,
+                          "fill": "$g-produce-tint",
+                          "cornerRadius": 10,
+                          "gap": 6,
+                          "padding": [
+                            0,
+                            10
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "yrttR",
+                              "name": "Group Icon",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "carrot",
+                              "library": "lucide",
+                              "fill": "$g-produce-text"
+                            },
+                            {
+                              "type": "text",
+                              "id": "m9mLRs",
+                              "name": "Group Value",
+                              "fill": "$g-produce-text",
+                              "content": "Produce",
+                              "fontFamily": "$font-body",
+                              "fontSize": 17,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "hhkNi",
+                              "name": "Picker Icon",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "chevrons-up-down",
+                              "library": "lucide",
+                              "fill": "$g-produce-text"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
                       "id": "b9t8Wg",
                       "name": "Quantity Option",
                       "width": "fill_container",
@@ -6286,77 +6489,6 @@
                           "ref": "dpu6T",
                           "name": "Unit Picker",
                           "width": "fit_content"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "CB99T",
-                      "name": "Group Option",
-                      "width": "fill_container",
-                      "height": 48,
-                      "stroke": "$line",
-                      "strokeWidth": {
-                        "bottom": 1
-                      },
-                      "justifyContent": "space_between",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "VY6zo",
-                          "name": "Option Label",
-                          "fill": "$ink-2",
-                          "content": "Group",
-                          "fontFamily": "$font-body",
-                          "fontSize": 16,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "q6B0f",
-                          "name": "Group Picker",
-                          "height": 36,
-                          "fill": "$g-produce-tint",
-                          "cornerRadius": 10,
-                          "gap": 6,
-                          "padding": [
-                            0,
-                            10
-                          ],
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "id": "yrttR",
-                              "name": "Group Icon",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "carrot",
-                              "library": "lucide",
-                              "fill": "$g-produce-text"
-                            },
-                            {
-                              "type": "text",
-                              "id": "m9mLRs",
-                              "name": "Group Value",
-                              "fill": "$g-produce-text",
-                              "content": "Produce",
-                              "fontFamily": "$font-body",
-                              "fontSize": 17,
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "icon",
-                              "id": "hhkNi",
-                              "name": "Picker Icon",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "chevrons-up-down",
-                              "library": "lucide",
-                              "fill": "$g-produce-text"
-                            }
-                          ]
                         }
                       ]
                     },
@@ -7267,10 +7399,26 @@
                     },
                     {
                       "type": "frame",
-                      "id": "hQ8xJ",
-                      "name": "Nav Spacer",
+                      "id": "wIwe1",
+                      "name": "Add More Toggle",
                       "width": 44,
-                      "height": 44
+                      "height": 44,
+                      "fill": "$surface-2",
+                      "cornerRadius": 22,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "WmFfn",
+                          "name": "Add More Icon",
+                          "width": 20,
+                          "height": 20,
+                          "icon": "list-plus",
+                          "library": "lucide",
+                          "fill": "$ink"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -7524,6 +7672,77 @@
                   "children": [
                     {
                       "type": "frame",
+                      "id": "VLNzd",
+                      "name": "Group Option",
+                      "width": "fill_container",
+                      "height": 48,
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "g1qOu",
+                          "name": "Option Label",
+                          "fill": "$ink-2",
+                          "content": "Group",
+                          "fontFamily": "$font-body",
+                          "fontSize": 16,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Zd4PB",
+                          "name": "Group Picker",
+                          "height": 36,
+                          "fill": "$g-produce-tint",
+                          "cornerRadius": 10,
+                          "gap": 6,
+                          "padding": [
+                            0,
+                            10
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "usrVs",
+                              "name": "Group Icon",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "carrot",
+                              "library": "lucide",
+                              "fill": "$g-produce-text"
+                            },
+                            {
+                              "type": "text",
+                              "id": "sgOuz",
+                              "name": "Group Value",
+                              "fill": "$g-produce-text",
+                              "content": "Produce",
+                              "fontFamily": "$font-body",
+                              "fontSize": 17,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "F3m8k",
+                              "name": "Picker Icon",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "chevrons-up-down",
+                              "library": "lucide",
+                              "fill": "$g-produce-text"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
                       "id": "LQd8n",
                       "name": "Quantity Option",
                       "width": "fill_container",
@@ -7668,77 +7887,6 @@
                           "ref": "dpu6T",
                           "name": "Unit Picker",
                           "width": "fit_content"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "VLNzd",
-                      "name": "Group Option",
-                      "width": "fill_container",
-                      "height": 48,
-                      "stroke": "$line",
-                      "strokeWidth": {
-                        "bottom": 1
-                      },
-                      "justifyContent": "space_between",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "g1qOu",
-                          "name": "Option Label",
-                          "fill": "$ink-2",
-                          "content": "Group",
-                          "fontFamily": "$font-body",
-                          "fontSize": 16,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "Zd4PB",
-                          "name": "Group Picker",
-                          "height": 36,
-                          "fill": "$g-produce-tint",
-                          "cornerRadius": 10,
-                          "gap": 6,
-                          "padding": [
-                            0,
-                            10
-                          ],
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "id": "usrVs",
-                              "name": "Group Icon",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "carrot",
-                              "library": "lucide",
-                              "fill": "$g-produce-text"
-                            },
-                            {
-                              "type": "text",
-                              "id": "sgOuz",
-                              "name": "Group Value",
-                              "fill": "$g-produce-text",
-                              "content": "Produce",
-                              "fontFamily": "$font-body",
-                              "fontSize": 17,
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "icon",
-                              "id": "F3m8k",
-                              "name": "Picker Icon",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "chevrons-up-down",
-                              "library": "lucide",
-                              "fill": "$g-produce-text"
-                            }
-                          ]
                         }
                       ]
                     },
@@ -11880,10 +12028,26 @@
                     },
                     {
                       "type": "frame",
-                      "id": "cvwUK",
-                      "name": "Nav Spacer",
+                      "id": "TbUdp",
+                      "name": "Add More Toggle",
                       "width": 44,
-                      "height": 44
+                      "height": 44,
+                      "fill": "$surface-2",
+                      "cornerRadius": 22,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "wR7Dg",
+                          "name": "Add More Icon",
+                          "width": 20,
+                          "height": 20,
+                          "icon": "list-plus",
+                          "library": "lucide",
+                          "fill": "$ink"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -12137,6 +12301,77 @@
                   "children": [
                     {
                       "type": "frame",
+                      "id": "P6oBS",
+                      "name": "Group Option",
+                      "width": "fill_container",
+                      "height": 48,
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "MjJZt",
+                          "name": "Option Label",
+                          "fill": "$ink-2",
+                          "content": "Group",
+                          "fontFamily": "$font-body",
+                          "fontSize": 16,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "OT5yT",
+                          "name": "Group Picker",
+                          "height": 36,
+                          "fill": "$g-produce-tint",
+                          "cornerRadius": 10,
+                          "gap": 6,
+                          "padding": [
+                            0,
+                            10
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "yIQvA",
+                              "name": "Group Icon",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "carrot",
+                              "library": "lucide",
+                              "fill": "$g-produce-text"
+                            },
+                            {
+                              "type": "text",
+                              "id": "TUfaT",
+                              "name": "Group Value",
+                              "fill": "$g-produce-text",
+                              "content": "Produce",
+                              "fontFamily": "$font-body",
+                              "fontSize": 17,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "Y2ueb9",
+                              "name": "Picker Icon",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "chevrons-up-down",
+                              "library": "lucide",
+                              "fill": "$g-produce-text"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
                       "id": "vT5cl",
                       "name": "Quantity Option",
                       "width": "fill_container",
@@ -12281,77 +12516,6 @@
                           "ref": "dpu6T",
                           "name": "Unit Picker",
                           "width": "fit_content"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "P6oBS",
-                      "name": "Group Option",
-                      "width": "fill_container",
-                      "height": 48,
-                      "stroke": "$line",
-                      "strokeWidth": {
-                        "bottom": 1
-                      },
-                      "justifyContent": "space_between",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "MjJZt",
-                          "name": "Option Label",
-                          "fill": "$ink-2",
-                          "content": "Group",
-                          "fontFamily": "$font-body",
-                          "fontSize": 16,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "OT5yT",
-                          "name": "Group Picker",
-                          "height": 36,
-                          "fill": "$g-produce-tint",
-                          "cornerRadius": 10,
-                          "gap": 6,
-                          "padding": [
-                            0,
-                            10
-                          ],
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "id": "yIQvA",
-                              "name": "Group Icon",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "carrot",
-                              "library": "lucide",
-                              "fill": "$g-produce-text"
-                            },
-                            {
-                              "type": "text",
-                              "id": "TUfaT",
-                              "name": "Group Value",
-                              "fill": "$g-produce-text",
-                              "content": "Produce",
-                              "fontFamily": "$font-body",
-                              "fontSize": 17,
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "icon",
-                              "id": "Y2ueb9",
-                              "name": "Picker Icon",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "chevrons-up-down",
-                              "library": "lucide",
-                              "fill": "$g-produce-text"
-                            }
-                          ]
                         }
                       ]
                     },
@@ -13823,10 +13987,26 @@
                     },
                     {
                       "type": "frame",
-                      "id": "KFpOX",
-                      "name": "Nav Spacer",
+                      "id": "JKu9A",
+                      "name": "Add More Toggle",
                       "width": 44,
-                      "height": 44
+                      "height": 44,
+                      "fill": "$surface-2",
+                      "cornerRadius": 22,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "f3it46",
+                          "name": "Add More Icon",
+                          "width": 20,
+                          "height": 20,
+                          "icon": "list-plus",
+                          "library": "lucide",
+                          "fill": "$ink"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -14080,6 +14260,77 @@
                   "children": [
                     {
                       "type": "frame",
+                      "id": "xoR8L",
+                      "name": "Group Option",
+                      "width": "fill_container",
+                      "height": 48,
+                      "stroke": "$line",
+                      "strokeWidth": {
+                        "bottom": 1
+                      },
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "jL6ED",
+                          "name": "Option Label",
+                          "fill": "$ink-2",
+                          "content": "Group",
+                          "fontFamily": "$font-body",
+                          "fontSize": 16,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "J5IDAD",
+                          "name": "Group Picker",
+                          "height": 36,
+                          "fill": "$g-produce-tint",
+                          "cornerRadius": 10,
+                          "gap": 6,
+                          "padding": [
+                            0,
+                            10
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "id": "IZGjD",
+                              "name": "Group Icon",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "carrot",
+                              "library": "lucide",
+                              "fill": "$g-produce-text"
+                            },
+                            {
+                              "type": "text",
+                              "id": "IFQta",
+                              "name": "Group Value",
+                              "fill": "$g-produce-text",
+                              "content": "Produce",
+                              "fontFamily": "$font-body",
+                              "fontSize": 17,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "icon",
+                              "id": "vwzTS",
+                              "name": "Picker Icon",
+                              "width": 16,
+                              "height": 16,
+                              "icon": "chevrons-up-down",
+                              "library": "lucide",
+                              "fill": "$g-produce-text"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
                       "id": "G9OhKZ",
                       "name": "Quantity Option",
                       "width": "fill_container",
@@ -14224,77 +14475,6 @@
                           "ref": "dpu6T",
                           "name": "Unit Picker",
                           "width": "fit_content"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "xoR8L",
-                      "name": "Group Option",
-                      "width": "fill_container",
-                      "height": 48,
-                      "stroke": "$line",
-                      "strokeWidth": {
-                        "bottom": 1
-                      },
-                      "justifyContent": "space_between",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "jL6ED",
-                          "name": "Option Label",
-                          "fill": "$ink-2",
-                          "content": "Group",
-                          "fontFamily": "$font-body",
-                          "fontSize": 16,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "J5IDAD",
-                          "name": "Group Picker",
-                          "height": 36,
-                          "fill": "$g-produce-tint",
-                          "cornerRadius": 10,
-                          "gap": 6,
-                          "padding": [
-                            0,
-                            10
-                          ],
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "icon",
-                              "id": "IZGjD",
-                              "name": "Group Icon",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "carrot",
-                              "library": "lucide",
-                              "fill": "$g-produce-text"
-                            },
-                            {
-                              "type": "text",
-                              "id": "IFQta",
-                              "name": "Group Value",
-                              "fill": "$g-produce-text",
-                              "content": "Produce",
-                              "fontFamily": "$font-body",
-                              "fontSize": 17,
-                              "fontWeight": "600"
-                            },
-                            {
-                              "type": "icon",
-                              "id": "vwzTS",
-                              "name": "Picker Icon",
-                              "width": 16,
-                              "height": 16,
-                              "icon": "chevrons-up-down",
-                              "library": "lucide",
-                              "fill": "$g-produce-text"
-                            }
-                          ]
                         }
                       ]
                     },
@@ -26960,6 +27140,81 @@
                 },
                 {
                   "type": "frame",
+                  "id": "DJ2Zw",
+                  "name": "Keep group",
+                  "width": "fill_container",
+                  "gap": 16,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Tbwk8",
+                      "name": "Keep Group Text",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "R8Lp9",
+                          "name": "Keep Group Label",
+                          "fill": "$ink",
+                          "content": "Keep group",
+                          "fontFamily": "$font-body",
+                          "fontSize": 16,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "fe16Y",
+                          "name": "Keep Group Note",
+                          "fill": "$ink-3",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "With Add more on, the next item goes in the same group",
+                          "lineHeight": 1.35,
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "xJxKu",
+                      "name": "Toggle",
+                      "width": 51,
+                      "height": 31,
+                      "fill": "$accent",
+                      "cornerRadius": 16,
+                      "padding": 2,
+                      "justifyContent": "end",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "Hdu7B",
+                          "name": "Knob",
+                          "fill": "#FFFFFF",
+                          "width": 27,
+                          "height": 27,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000026",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 3
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "a8dxE",
                   "name": "Checked items to the end",
                   "width": "fill_container",
@@ -28473,6 +28728,81 @@
                         {
                           "type": "ellipse",
                           "id": "l7dVZ",
+                          "name": "Knob",
+                          "fill": "#FFFFFF",
+                          "width": 27,
+                          "height": 27,
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000026",
+                            "offset": {
+                              "x": 0,
+                              "y": 1
+                            },
+                            "blur": 3
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "u4prSf",
+                  "name": "Keep group",
+                  "width": "fill_container",
+                  "gap": 16,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "afpP4",
+                      "name": "Keep Group Text",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "CZCqa",
+                          "name": "Keep Group Label",
+                          "fill": "$ink",
+                          "content": "Keep group",
+                          "fontFamily": "$font-body",
+                          "fontSize": 16,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "utbYi",
+                          "name": "Keep Group Note",
+                          "fill": "$ink-3",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "With Add more on, the next item goes in the same group",
+                          "lineHeight": 1.35,
+                          "fontFamily": "$font-body",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "SYymt",
+                      "name": "Toggle",
+                      "width": 51,
+                      "height": 31,
+                      "fill": "$accent",
+                      "cornerRadius": 16,
+                      "padding": 2,
+                      "justifyContent": "end",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "e3PFBA",
                           "name": "Knob",
                           "fill": "#FFFFFF",
                           "width": 27,
