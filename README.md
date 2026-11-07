@@ -3,29 +3,27 @@
 A self-hosted, offline-first household grocery list. One list per month, shared live between everyone in the house. The list works fully offline and syncs when the server is reachable.
 
 <p align="center">
-  <img src="docs/screenshots/list.png" width="24%" alt="This month's list, grouped into sections like Fruits &amp; vegetables and Dairy &amp; eggs" />
-  <img src="docs/screenshots/add.png" width="24%" alt="Adding an item, with a suggestion from your usual items" />
-  <img src="docs/screenshots/arrange.png" width="24%" alt="Arranging the list by group or by priority" />
-  <img src="docs/screenshots/dark.png" width="24%" alt="The list in dark mode" />
+  <img src="docs/screenshots/list.png" width="30%" alt="This month's list, grouped into sections like Fruits &amp; vegetables and Dairy &amp; eggs" />
+  <img src="docs/screenshots/add.png" width="30%" alt="Adding an item, with a suggestion from your usual items" />
+  <img src="docs/screenshots/dark.png" width="30%" alt="The list in dark mode" />
 </p>
 
 ## Features
 
-- **One list per month.** Anything you didn't buy carries over to next month by itself, tagged with when it was first added.
-- **Shared live.** Everyone in the house sees changes as they happen. Pick a profile on each phone; there are no accounts.
-- **Works offline.** Every edit applies on the phone first and syncs when the server is back in reach.
-- **Quick to add.** Suggestions from your usual items, remembered units and groups, and an "Add more" mode for entering a whole shop in one go.
-- **Groups your way.** Sections like Fruits & vegetables or Dairy & eggs, each with its own icon and color. Sort the list by group or by priority.
-- **Make it yours.** Light, dark or system theme, six accent colors, and per-phone choices like hiding units.
-- **Self-hosted.** One small container holds your data ([deploy it](#deploy-the-server)). The same code runs on Android, iOS and as a web app.
+- **One list per month.** Unbought items carry over.
+- **Shared live**, no accounts.
+- **Works offline**, syncs when it can.
+- **Quick to add.** Usuals, remembered units, "Add more".
+- **Groups** with icons and colors, sorted by group or priority.
+- **Themes.** Light, dark and six accent colors.
+- **Self-hosted** in one container ([deploy it](#deploy-the-server)), on Android, iOS and the web.
 
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/add-more.png" width="24%" alt="Add more: after adding Yogurt, a snackbar offers Undo and the form stays open in the same group" />
-  <img src="docs/screenshots/group-picker.png" width="24%" alt="Picking a group for a new item" />
-  <img src="docs/screenshots/groups.png" width="24%" alt="Groups, each with its own icon and color, in the order they appear in the list" />
-  <img src="docs/screenshots/settings.png" width="24%" alt="Settings: appearance, accent color, units, Keep group and where checked items go" />
+  <img src="docs/screenshots/add-more.png" width="30%" alt="Add more: after adding Yogurt, a snackbar offers Undo and the form stays open in the same group" />
+  <img src="docs/screenshots/groups.png" width="30%" alt="Groups, each with its own icon and color, in the order they appear in the list" />
+  <img src="docs/screenshots/settings.png" width="30%" alt="Settings: appearance, accent color, units, Keep group and where checked items go" />
 </p>
 
 ## Repository layout
