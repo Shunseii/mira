@@ -8,10 +8,27 @@ A self-hosted, offline-first household grocery list. One list per month, shared 
   <img src="docs/screenshots/arrange.png" width="24%" alt="Arranging the list by group or by priority" />
   <img src="docs/screenshots/dark.png" width="24%" alt="The list in dark mode" />
 </p>
+
+## Features
+
+- **One list per month.** Anything you didn't buy carries over to next month by itself, tagged with when it was first added.
+- **Shared live.** Everyone in the house sees changes as they happen. Pick a profile on each phone; there are no accounts.
+- **Works offline.** Every edit applies on the phone first and syncs when the server is back in reach.
+- **Quick to add.** Suggestions from your usual items, remembered units and groups, and an "Add more" mode for entering a whole shop in one go.
+- **Groups your way.** Sections like Fruits & vegetables or Dairy & eggs, each with its own icon and color. Sort the list by group or by priority.
+- **Make it yours.** Light, dark or system theme, six accent colors, and per-phone choices like hiding units.
+- **Self-hosted.** One small container holds your data ([deploy it](#deploy-the-server)). The same code runs on Android, iOS and as a web app.
+
+## Screenshots
+
 <p align="center">
-  <img src="docs/screenshots/settings.png" width="24%" alt="Settings: appearance, accent color, units and where checked items go" />
+  <img src="docs/screenshots/add-more.png" width="24%" alt="Add more: after adding Yogurt, a snackbar offers Undo and the form stays open in the same group" />
+  <img src="docs/screenshots/group-picker.png" width="24%" alt="Picking a group for a new item" />
   <img src="docs/screenshots/groups.png" width="24%" alt="Groups, each with its own icon and color, in the order they appear in the list" />
+  <img src="docs/screenshots/settings.png" width="24%" alt="Settings: appearance, accent color, units, Keep group and where checked items go" />
 </p>
+
+## Repository layout
 
 ```
 apps/mobile    Expo app (iOS, Android, and the web PWA from the same code)
