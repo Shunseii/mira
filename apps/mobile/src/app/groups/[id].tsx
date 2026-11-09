@@ -2,7 +2,8 @@ import { createGroup, deleteGroup, readGroup, restoreGroup, updateGroup } from "
 import { useLocalSearchParams, useNavigation } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, TextInput, View } from "react-native";
-import { KeyboardAvoidingView, KeyboardAwareScrollView } from "react-native-keyboard-controller";
+import { KeyboardAwareScrollView, KeyboardStickyView } from "react-native-keyboard-controller";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "@/components/Button";
 import { ColorRow, CustomColorSheet, type Appearance } from "@/components/ColorPicker";
 import { GroupTintBadge, useGroupTone } from "@/components/GroupBadge";
@@ -30,6 +31,7 @@ const SectionLabel = ({ label }: { label: string }) => (
 
 export default function EditGroup() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const household = useHousehold();
   const { id } = useLocalSearchParams<{ id: string }>();
   const isNew = id === "new";
@@ -83,8 +85,8 @@ export default function EditGroup() {
 
   return (
     <Screen>
-      <KeyboardAvoidingView behavior="padding" style={styles.flex}>
-        <KeyboardAwareScrollView mode="layout" bottomOffset={24} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <View style={styles.flex}>
+        <KeyboardAwareScrollView mode="layout" bottomOffset={FOOTER_SPACE} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.nav}>
             <Tap accessibilityRole="button" onPress={() => goBack("/groups")} style={styles.back}>
               <Icon name="chevron-left" size={20} color={colors.accent} />
@@ -146,13 +148,16 @@ export default function EditGroup() {
           </View>
         </KeyboardAwareScrollView>
 
-        {/* Save stays put under the scrolling page; it steps aside while the icon search has the keyboard. */}
+        {/* Save rides on top of the keyboard; it steps aside while the icon search has the keyboard. */}
         {searchingIcons ? null : (
-          <View style={[styles.footer, { borderTopColor: colors.line, backgroundColor: colors.bg }]}>
+          <KeyboardStickyView
+            offset={{ closed: 0, opened: insets.bottom }}
+            style={[styles.footer, { borderTopColor: colors.line, backgroundColor: colors.bg }]}
+          >
             <Button label={isNew ? "Create group" : "Save group"} onPress={save} disabled={!name.trim()} />
-          </View>
+          </KeyboardStickyView>
         )}
-      </KeyboardAvoidingView>
+      </View>
       <CustomColorSheet
         ref={customSheet}
         initial={appearance.color2 ? undefined : appearance.color}
@@ -166,6 +171,9 @@ export default function EditGroup() {
 
 /** In case the transition-end event never comes (e.g. no animation). */
 const SETTLE_FALLBACK_MS = 600;
+
+/** Room kept under a focused field so it never ends up behind the pinned Save button. */
+const FOOTER_SPACE = 100;
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
