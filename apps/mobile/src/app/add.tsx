@@ -205,7 +205,7 @@ export default function AddItem() {
               />
             </View>
 
-            <KeyboardAwareScrollView bottomOffset={FOOTER_SPACE} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+            <KeyboardAwareScrollView mode="layout" bottomOffset={FOOTER_SPACE} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
               <NameField
                 ref={nameRef}
                 autoFocus

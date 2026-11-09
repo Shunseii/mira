@@ -84,7 +84,7 @@ export default function EditGroup() {
   return (
     <Screen>
       <KeyboardAvoidingView behavior="padding" style={styles.flex}>
-        <KeyboardAwareScrollView bottomOffset={24} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <KeyboardAwareScrollView mode="layout" bottomOffset={24} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.nav}>
             <Tap accessibilityRole="button" onPress={() => goBack("/groups")} style={styles.back}>
               <Icon name="chevron-left" size={20} color={colors.accent} />
