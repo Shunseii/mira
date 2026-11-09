@@ -5,7 +5,7 @@ import {
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
 import { forwardRef, useCallback, useEffect, useRef, useState, type ForwardedRef, type ReactNode } from "react";
-import { BackHandler, StyleSheet, View } from "react-native";
+import { BackHandler, Keyboard, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SPRING_SNAPPY } from "@/theme/motion";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -56,6 +56,10 @@ export const Sheet = forwardRef<
         assignRef(ref, instance);
       }}
       onChange={(index) => setOpen(index >= 0)}
+      // The screen's keyboard (e.g. Add item's name field) would otherwise stay up over the sheet.
+      onAnimate={(fromIndex, toIndex) => {
+        if (fromIndex < 0 && toIndex >= 0) Keyboard.dismiss();
+      }}
       enableDynamicSizing
       maxDynamicContentSize={640}
       backdropComponent={backdrop}
