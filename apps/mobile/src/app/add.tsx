@@ -81,6 +81,8 @@ export default function AddItem() {
   const [unitTouched, setUnitTouched] = useState(false);
   const [groupId, setGroupId] = useState<string | undefined>();
   const [groupTouched, setGroupTouched] = useState(false);
+  /** With Add multiple, the group the last item went into: the next item's group until a name remembers another. */
+  const [carriedGroupId, setCarriedGroupId] = useState<string | undefined>();
   /** The snackbar: "Added X" with Undo for that item, or a plain note. */
   const [notice, setNotice] = useState<{ message: string; undoItemId?: string }>();
   const [footerHeight, setFooterHeight] = useState(0);
@@ -88,7 +90,7 @@ export default function AddItem() {
   const groupSheet = useRef<SheetRef>(null);
   const monthSheet = useRef<SheetRef>(null);
   const unitSheet = useRef<SheetRef>(null);
-  const { showUnits, keepAdding, keepGroup } = usePrefs();
+  const { showUnits, keepAdding } = usePrefs();
   const addLabel = `Add to ${monthName(month)}`;
   const stickyOffset = { closed: 0, opened: insets.bottom };
 
@@ -122,20 +124,15 @@ export default function AddItem() {
   // Typing a name you've bought before brings back its unit and group, unless you've picked them.
   useEffect(() => {
     if (!unitTouched) setUnit(unitHints.remembered);
-    if (!groupTouched) setGroupId(remembered?.groupId);
-  }, [unitHints.remembered, remembered?.groupId, unitTouched, groupTouched]);
+    if (!groupTouched) setGroupId(remembered?.groupId ?? carriedGroupId);
+  }, [unitHints.remembered, remembered?.groupId, carriedGroupId, unitTouched, groupTouched]);
 
   const reset = () => {
     setName("");
     setQty(undefined);
     setUnit(undefined);
     setUnitTouched(false);
-    if (keepGroup) {
-      // Counts as picked, so a remembered group for the next name doesn't replace it.
-      setGroupTouched(true);
-      return;
-    }
-    setGroupId(undefined);
+    setCarriedGroupId(groupId);
     setGroupTouched(false);
   };
 
