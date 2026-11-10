@@ -320,6 +320,13 @@ describe("add flow helpers", () => {
     expect(usuals({ store, month: NOV, query: "tom" }).map((usual) => usual.name)).toEqual(["Tomatoes", "Tomato paste"]);
   });
 
+  it("leaves out the usual whose name the query already matches exactly", () => {
+    const store = newStore();
+    for (const name of ["Apple", "Potato", "Pineapple"]) addItem({ store, month: OCT, userId: "u1", item: { name } });
+    expect(usuals({ store, month: NOV, query: "apple" }).map((usual) => usual.name)).toEqual(["Pineapple"]);
+    expect(usuals({ store, month: NOV, query: "Apple " }).map((usual) => usual.name)).toEqual(["Pineapple"]);
+  });
+
   it("suggests the unit last used for the same name, then household favourites, then defaults", () => {
     const store = newStore();
     expect(suggestUnits({ store, name: "Tomatoes" })).toEqual({ remembered: undefined, suggestions: ["kg", "pack", "g"] });

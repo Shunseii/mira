@@ -133,7 +133,8 @@ export type Usual = {
 
 /**
  * Frequently bought items, derived from history: distinct months an item name
- * appeared in, most frequent first. Names already open in `month` are skipped.
+ * appeared in, most frequent first. Names already open in `month` are skipped, and so is
+ * the name `query` already spells out in full: it's typed, so there's nothing to suggest.
  */
 export const usuals = ({ store, month, query = "", limit = 12 }: { store: Store; month: MonthKey; query?: string; limit?: number }): Usual[] => {
   const needle = normalizeName(query);
@@ -146,7 +147,7 @@ export const usuals = ({ store, month, query = "", limit = 12 }: { store: Store;
   for (const item of readAll({ store, table: TABLES.items, read: readItem })) {
     if (item.deletedAt !== undefined) continue;
     const key = normalizeName(item.name);
-    if (!key || openNow.has(key) || (needle && !key.includes(needle))) continue;
+    if (!key || openNow.has(key) || (needle && !key.includes(needle)) || key === needle) continue;
     const entry = byName.get(key) ?? { name: item.name, months: 0, lastAddedAt: 0, monthSet: new Set<string>() };
     entry.monthSet.add(item.listId);
     if (item.addedAt >= entry.lastAddedAt) {
