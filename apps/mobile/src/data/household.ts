@@ -109,11 +109,13 @@ export const startHousehold = async ({
     }
   };
 
+  // Bookkeeping the app does on its own (carrying items into a new month, "last seen"), so it skips
+  // write(): it still syncs, but it isn't a change the person made and shouldn't count as waiting to sync.
   const housekeeping = () => {
-    write((s) => {
-      rollover({ store: s, month: monthKeyOf(new Date()) });
+    store.transaction(() => {
+      rollover({ store, month: monthKeyOf(new Date()) });
       const userId = getUserId();
-      if (userId) touchUser({ store: s, userId });
+      if (userId) touchUser({ store, userId });
     });
   };
 
