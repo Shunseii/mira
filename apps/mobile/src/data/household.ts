@@ -158,8 +158,10 @@ export const startHousehold = async ({
       synchronizer = created;
       opened.addEventListener("close", () => {
         if (synchronizer !== created) return;
-        patch({ status: "offline" });
-        void dropConnection().then(scheduleReconnect);
+        // The OS often drops the socket while the app is in the background, so this usually fires on
+        // resume. Reconnect straight away and only call it offline if that attempt fails too.
+        patch({ status: "connecting" });
+        void dropConnection().then(connect);
       });
       await created.startSync();
       attempt = 0;
@@ -170,7 +172,10 @@ export const startHousehold = async ({
     } catch {
       await dropConnection();
       const check = await checkPassword({ serverUrl, password });
-      patch({ status: check === "wrong" ? "unauthorized" : "offline" });
+      // One failed attempt is often just the network waking up at launch or resume; the quick retry
+      // usually lands, so stay "connecting" and only show offline once a retry has failed too.
+      const firstMiss = attempt === 0;
+      patch({ status: check === "wrong" ? "unauthorized" : firstMiss ? "connecting" : "offline" });
       scheduleReconnect();
     } finally {
       connecting = false;
