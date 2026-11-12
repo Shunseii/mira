@@ -20,15 +20,11 @@ import Animated, { FadeIn, LinearTransition } from "react-native-reanimated";
 import { BUTTON_RADIUS, Button, IconButton } from "@/components/Button";
 import { FabMorph } from "@/components/FabMorph";
 import { NameField } from "@/components/NameField";
-import { GroupSheet } from "@/components/GroupSheet";
-import { GroupValue, MonthValue, OptionRow, OptionTable, Stepper } from "@/components/ItemOptions";
-import { MonthSheet } from "@/components/MonthSheet";
+import { ItemFields } from "@/components/ItemFields";
 import { Screen } from "@/components/Screen";
-import type { SheetRef } from "@/components/Sheet";
 import { Tap, haptic } from "@/components/Tap";
 import { Text } from "@/components/Text";
 import { UNDO_MS, UndoSnackbar } from "@/components/UndoSnackbar";
-import { UnitSheet, UnitSuggestions } from "@/components/UnitPicker";
 import { useCurrentMonth, useHousehold, useStoreQuery } from "@/data/HouseholdProvider";
 import { setPrefs, usePrefs } from "@/data/prefs";
 import { useSession } from "@/data/session";
@@ -81,15 +77,13 @@ export default function AddItem() {
   const [unitTouched, setUnitTouched] = useState(false);
   const [groupId, setGroupId] = useState<string | undefined>();
   const [groupTouched, setGroupTouched] = useState(false);
+  const [note, setNote] = useState("");
   /** With Add multiple, the group the last item went into: the next item's group until a name remembers another. */
   const [carriedGroupId, setCarriedGroupId] = useState<string | undefined>();
   /** The snackbar: "Added X" with Undo for that item, or a plain note. */
   const [notice, setNotice] = useState<{ message: string; undoItemId?: string }>();
   const [footerHeight, setFooterHeight] = useState(0);
   const nameRef = useRef<TextInput>(null);
-  const groupSheet = useRef<SheetRef>(null);
-  const monthSheet = useRef<SheetRef>(null);
-  const unitSheet = useRef<SheetRef>(null);
   const { showUnits, keepAdding } = usePrefs();
   const addLabel = `Add to ${monthName(month)}`;
   const stickyOffset = { closed: 0, opened: insets.bottom };
@@ -132,6 +126,7 @@ export default function AddItem() {
     setQty(undefined);
     setUnit(undefined);
     setUnitTouched(false);
+    setNote("");
     setCarriedGroupId(groupId);
     setGroupTouched(false);
   };
@@ -153,6 +148,7 @@ export default function AddItem() {
           qty: qty === undefined ? undefined : String(qty),
           unit: showUnits ? unit : undefined,
           groupId: group && !group.deletedAt ? groupId : undefined,
+          note,
         },
       });
     });
@@ -232,30 +228,23 @@ export default function AddItem() {
                 </Animated.View>
               ) : null}
 
-              <OptionTable>
-                <OptionRow label="Group">
-                  <GroupValue group={group && !group.deletedAt ? group : undefined} onPress={() => groupSheet.current?.present()} />
-                </OptionRow>
-                <OptionRow label="Quantity">
-                  <Stepper value={qty} onChange={setQty} />
-                </OptionRow>
-                {showUnits ? (
-                  <OptionRow label="Unit" hint="optional">
-                    <UnitSuggestions
-                      suggestions={unitHints.suggestions}
-                      selected={unit}
-                      onSelect={(next) => {
-                        setUnit(next);
-                        setUnitTouched(true);
-                      }}
-                      onMore={() => unitSheet.current?.present()}
-                    />
-                  </OptionRow>
-                ) : null}
-                <OptionRow label="List">
-                  <MonthValue month={month} onPress={() => monthSheet.current?.present()} />
-                </OptionRow>
-              </OptionTable>
+              <ItemFields
+                value={{ groupId, qty, unit, month, note }}
+                onChange={(patch) => {
+                  if ("groupId" in patch) {
+                    setGroupId(patch.groupId);
+                    setGroupTouched(true);
+                  }
+                  if ("qty" in patch) setQty(patch.qty);
+                  if ("unit" in patch) {
+                    setUnit(patch.unit);
+                    setUnitTouched(true);
+                  }
+                  if (patch.month) setMonth(patch.month);
+                  if (patch.note !== undefined) setNote(patch.note);
+                }}
+                unitSuggestions={unitHints.suggestions}
+              />
             </KeyboardAwareScrollView>
 
             {/* Its own layer riding the keyboard just above the footer: as the footer's child it would sit
@@ -292,25 +281,6 @@ export default function AddItem() {
             </KeyboardStickyView>
           </View>
 
-          <GroupSheet
-            ref={groupSheet}
-            selectedId={groupId}
-            onSelect={(next) => {
-              setGroupId(next);
-              setGroupTouched(true);
-            }}
-          />
-          <MonthSheet ref={monthSheet} current={current} selected={month} onSelect={setMonth} />
-          {showUnits ? (
-            <UnitSheet
-              ref={unitSheet}
-              selected={unit}
-              onSelect={(next) => {
-                setUnit(next);
-                setUnitTouched(true);
-              }}
-            />
-          ) : null}
         </Screen>
       )}
     </FabMorph>
