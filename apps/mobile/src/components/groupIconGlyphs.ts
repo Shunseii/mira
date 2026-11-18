@@ -93,6 +93,23 @@ export const GROUP_ICON_GLYPHS: Record<GroupIcon, string> = {
   tag: "\uE17F",
   star: "\uE176",
   heart: "\uE0F2",
+  "brush-cleaning": "\uE666",
+  "soap-dispenser-droplet": "\uE669",
+  toothbrush: "\uE76A",
+  sofa: "\uE2C4",
+  bed: "\uE2C1",
+  lamp: "\uE2D8",
+  plug: "\uE37F",
+  smartphone: "\uE163",
+  box: "\uE061",
+  key: "\uE0FD",
+  calendar: "\uE063",
+  briefcase: "\uE062",
+  pencil: "\uE1F9",
+  "book-open": "\uE05F",
+  dumbbell: "\uE3A1",
+  sun: "\uE178",
+  umbrella: "\uE199",
 };
 
 export const BAN_GLYPH = "\uE051";

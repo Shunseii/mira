@@ -466,8 +466,14 @@ describe("group icons", () => {
   it("has unique, kebab-case keys and a curated size", () => {
     expect(new Set(GROUP_ICONS).size).toBe(GROUP_ICONS.length);
     expect(GROUP_ICONS.length).toBeGreaterThanOrEqual(60);
-    expect(GROUP_ICONS.length).toBeLessThanOrEqual(100);
+    expect(GROUP_ICONS.length).toBeLessThanOrEqual(120);
     for (const key of GROUP_ICONS) expect(key).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+  });
+
+  it("finds the household icons by what they're for", () => {
+    expect(searchGroupIcons("broom")[0]).toBe("brush-cleaning");
+    expect(searchGroupIcons("cleaning")).toEqual(expect.arrayContaining(["brush-cleaning", "spray-can"]));
+    expect(searchGroupIcons("soap")).toContain("soap-dispenser-droplet");
   });
 
   it("keeps an unknown (newer) icon key instead of dropping it on save", () => {

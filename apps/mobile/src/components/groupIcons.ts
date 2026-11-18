@@ -88,6 +88,23 @@ import FuelIcon from "lucide-react-native/icons/fuel";
 import TagIcon from "lucide-react-native/icons/tag";
 import StarIcon from "lucide-react-native/icons/star";
 import HeartIcon from "lucide-react-native/icons/heart";
+import BrushCleaningIcon from "lucide-react-native/icons/brush-cleaning";
+import SoapDispenserDropletIcon from "lucide-react-native/icons/soap-dispenser-droplet";
+import ToothbrushIcon from "lucide-react-native/icons/toothbrush";
+import SofaIcon from "lucide-react-native/icons/sofa";
+import BedIcon from "lucide-react-native/icons/bed";
+import LampIcon from "lucide-react-native/icons/lamp";
+import PlugIcon from "lucide-react-native/icons/plug";
+import SmartphoneIcon from "lucide-react-native/icons/smartphone";
+import BoxIcon from "lucide-react-native/icons/box";
+import KeyIcon from "lucide-react-native/icons/key";
+import CalendarIcon from "lucide-react-native/icons/calendar";
+import BriefcaseIcon from "lucide-react-native/icons/briefcase";
+import PencilIcon from "lucide-react-native/icons/pencil";
+import BookOpenIcon from "lucide-react-native/icons/book-open";
+import DumbbellIcon from "lucide-react-native/icons/dumbbell";
+import SunIcon from "lucide-react-native/icons/sun";
+import UmbrellaIcon from "lucide-react-native/icons/umbrella";
 
 /** Every curated group icon key → its bundled component. The type forces this to stay complete. */
 export const GROUP_ICON_COMPONENTS: Record<GroupIcon, LucideIcon> = {
@@ -178,4 +195,21 @@ export const GROUP_ICON_COMPONENTS: Record<GroupIcon, LucideIcon> = {
   tag: TagIcon,
   star: StarIcon,
   heart: HeartIcon,
+  "brush-cleaning": BrushCleaningIcon,
+  "soap-dispenser-droplet": SoapDispenserDropletIcon,
+  toothbrush: ToothbrushIcon,
+  sofa: SofaIcon,
+  bed: BedIcon,
+  lamp: LampIcon,
+  plug: PlugIcon,
+  smartphone: SmartphoneIcon,
+  box: BoxIcon,
+  key: KeyIcon,
+  calendar: CalendarIcon,
+  briefcase: BriefcaseIcon,
+  pencil: PencilIcon,
+  "book-open": BookOpenIcon,
+  dumbbell: DumbbellIcon,
+  sun: SunIcon,
+  umbrella: UmbrellaIcon,
 };
