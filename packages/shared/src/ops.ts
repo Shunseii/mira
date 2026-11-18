@@ -11,6 +11,7 @@ const timestamp = ({ now }: Clock): number => now ?? Date.now();
 const clean = (value: string): string => value.trim().replace(/\s+/g, " ");
 
 const nextPosition = (positions: number[]): number => (positions.length === 0 ? 1 : Math.max(...positions) + 1);
+const firstPosition = (positions: number[]): number => (positions.length === 0 ? 1 : Math.min(...positions) - 1);
 
 /* ---------- users ---------- */
 
@@ -147,7 +148,17 @@ const optionalCells = (fields: Omit<ItemFields, "name">) => {
   return cells;
 };
 
-export const addItem = ({ store, month, userId, item, now }: { store: Store; month: MonthKey; userId: string; item: ItemFields } & Clock): string => {
+/** Where a newly added item lands in the month's list order. */
+export type NewItemPlacement = "top" | "bottom";
+
+export const addItem = ({
+  store,
+  month,
+  userId,
+  item,
+  placement = "bottom",
+  now,
+}: { store: Store; month: MonthKey; userId: string; item: ItemFields; placement?: NewItemPlacement } & Clock): string => {
   const id = randomId();
   const at = timestamp({ now });
   const monthItems = liveItemsOf({ store, month });
@@ -158,7 +169,7 @@ export const addItem = ({ store, month, userId, item, now }: { store: Store; mon
       name: clean(item.name),
       added_by: userId,
       added_at: at,
-      position: nextPosition(monthItems.map((other) => other.position)),
+      position: (placement === "top" ? firstPosition : nextPosition)(monthItems.map((other) => other.position)),
       ...optionalCells(item),
     });
   });

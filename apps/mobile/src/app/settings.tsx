@@ -1,4 +1,4 @@
-import { liveGroups, liveUsers, monthName } from "@mira/shared";
+import { liveGroups, liveUsers, monthName, type NewItemPlacement } from "@mira/shared";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
@@ -72,10 +72,23 @@ const CHECKED_ITEMS_OPTIONS: { value: CheckedItems; label: string; description: 
   { value: "section", label: "Move to a Checked section", description: "Collected at the bottom in one section you can fold away" },
 ];
 
-const CheckedItemsOption = ({ value, label, description }: { value: CheckedItems; label: string; description: string }) => {
+const NEW_ITEMS_OPTIONS: { value: NewItemPlacement; label: string; description: string }[] = [
+  { value: "bottom", label: "At the bottom", description: "Each new item goes after everything already on the list" },
+  { value: "top", label: "At the top", description: "Each new item goes first, so the newest are easy to spot" },
+];
+
+const ChoiceOption = ({
+  label,
+  description,
+  selected,
+  onSelect,
+}: {
+  label: string;
+  description: string;
+  selected: boolean;
+  onSelect: () => void;
+}) => {
   const { colors } = useTheme();
-  const { checkedItems } = usePrefs();
-  const selected = checkedItems === value;
   return (
     <Tap
       accessibilityRole="radio"
@@ -85,7 +98,7 @@ const CheckedItemsOption = ({ value, label, description }: { value: CheckedItems
       feedback="select"
       pressScale={0.99}
       onPress={() => {
-        if (!selected) setPrefs({ checkedItems: value });
+        if (!selected) onSelect();
       }}
       style={styles.optionRow}
     >
@@ -383,7 +396,30 @@ export default function Settings() {
         </View>
         <View accessibilityRole="radiogroup" accessibilityLabel="Checked items">
           {CHECKED_ITEMS_OPTIONS.map((option) => (
-            <CheckedItemsOption key={option.value} {...option} />
+            <ChoiceOption
+              key={option.value}
+              label={option.label}
+              description={option.description}
+              selected={prefs.checkedItems === option.value}
+              onSelect={() => setPrefs({ checkedItems: option.value })}
+            />
+          ))}
+        </View>
+        <View style={styles.choiceText}>
+          <Text variant="label">New items</Text>
+          <Text variant="caption" color="ink2">
+            Where items you add land on the list. Everyone else keeps their own choice.
+          </Text>
+        </View>
+        <View accessibilityRole="radiogroup" accessibilityLabel="New items">
+          {NEW_ITEMS_OPTIONS.map((option) => (
+            <ChoiceOption
+              key={option.value}
+              label={option.label}
+              description={option.description}
+              selected={prefs.newItems === option.value}
+              onSelect={() => setPrefs({ newItems: option.value })}
+            />
           ))}
         </View>
         <View style={styles.choiceText}>

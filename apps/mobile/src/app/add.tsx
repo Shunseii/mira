@@ -84,7 +84,7 @@ export default function AddItem() {
   const [notice, setNotice] = useState<{ message: string; undoItemId?: string }>();
   const [footerHeight, setFooterHeight] = useState(0);
   const nameRef = useRef<TextInput>(null);
-  const { showUnits, keepAdding } = usePrefs();
+  const { showUnits, keepAdding, newItems } = usePrefs();
   const addLabel = `Add to ${monthName(month)}`;
   const stickyOffset = { closed: 0, opened: insets.bottom };
 
@@ -150,6 +150,7 @@ export default function AddItem() {
           groupId: group && !group.deletedAt ? groupId : undefined,
           note,
         },
+        placement: newItems,
       });
     });
     haptic("success");

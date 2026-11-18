@@ -1,3 +1,4 @@
+import type { NewItemPlacement } from "@mira/shared";
 import { deviceStorage } from "@/lib/deviceStorage";
 import { createExternalStore, useExternalStore } from "@/lib/externalStore";
 import { isAccentName, type AccentName, type ThemeMode } from "@/theme/tokens";
@@ -21,6 +22,8 @@ type Prefs = {
   groupLabel: GroupLabel;
   /** Add item's button adds and clears the form for the next item, instead of going back to the list. */
   keepAdding: boolean;
+  /** Where items this person adds land in the shared list order. */
+  newItems: NewItemPlacement;
 };
 
 const KEY = "mira.prefs";
@@ -28,7 +31,7 @@ const KEY = "mira.prefs";
 const isCheckedItems = (value: unknown): value is CheckedItems => value === "stay" || value === "end" || value === "section";
 
 const load = (): Prefs => {
-  const fallback: Prefs = { themeMode: "system", accent: "terracotta", listView: "group", showUnits: true, checkedItems: "end", checkedCollapsed: true, groupLabel: "name", keepAdding: false };
+  const fallback: Prefs = { themeMode: "system", accent: "terracotta", listView: "group", showUnits: true, checkedItems: "end", checkedCollapsed: true, groupLabel: "name", keepAdding: false, newItems: "bottom" };
   try {
     const parsed = JSON.parse(deviceStorage.get(KEY) ?? "{}") as Partial<Record<keyof Prefs | "checkedToEnd", unknown>>;
     const themeMode = parsed.themeMode === "light" || parsed.themeMode === "dark" ? parsed.themeMode : "system";
@@ -46,6 +49,7 @@ const load = (): Prefs => {
       checkedCollapsed: parsed.checkedCollapsed !== false,
       groupLabel: parsed.groupLabel === "icon" ? "icon" : "name",
       keepAdding: parsed.keepAdding === true,
+      newItems: parsed.newItems === "top" ? "top" : "bottom",
     };
   } catch {
     return fallback;

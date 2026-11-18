@@ -241,6 +241,15 @@ describe("month view", () => {
     expect(inline.priority.map((item) => item.name)).toEqual(["Eggs", "Milk", "Rice"]);
   });
 
+  it("puts new items at the top when asked, and at the bottom by default", () => {
+    const store = newStore();
+    addItem({ store, month: NOV, userId: "u1", item: { name: "A" } });
+    addItem({ store, month: NOV, userId: "u1", item: { name: "B" }, placement: "top" });
+    addItem({ store, month: NOV, userId: "u1", item: { name: "C" } });
+    addItem({ store, month: NOV, userId: "u1", item: { name: "D" }, placement: "top" });
+    expect(buildMonthView({ store, month: NOV }).sections[0]?.items.map((item) => item.name)).toEqual(["D", "B", "A", "C"]);
+  });
+
   it("reorders with midpoint positions", () => {
     const store = newStore();
     const a = addItem({ store, month: NOV, userId: "u1", item: { name: "A" } });
