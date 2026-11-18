@@ -26,7 +26,7 @@ import { Tap, haptic } from "@/components/Tap";
 import { Text } from "@/components/Text";
 import { UNDO_MS, UndoSnackbar } from "@/components/UndoSnackbar";
 import { useCurrentMonth, useHousehold, useStoreQuery } from "@/data/HouseholdProvider";
-import { setPrefs, usePrefs } from "@/data/prefs";
+import { setPrefs, usePref } from "@/data/prefs";
 import { useSession } from "@/data/session";
 import { goBack } from "@/lib/navigation";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -34,7 +34,7 @@ import { FONTS } from "@/theme/tokens";
 
 const UsualChip = ({ usual, onPress }: { usual: Usual; onPress: () => void }) => {
   const { colors } = useTheme();
-  const { showUnits } = usePrefs();
+  const showUnits = usePref("showUnits");
   const quantity = formatQuantity({ qty: usual.qty, unit: showUnits ? usual.unit : undefined });
   return (
     <Tap
@@ -84,7 +84,9 @@ export default function AddItem() {
   const [notice, setNotice] = useState<{ message: string; undoItemId?: string }>();
   const [footerHeight, setFooterHeight] = useState(0);
   const nameRef = useRef<TextInput>(null);
-  const { showUnits, keepAdding, newItems } = usePrefs();
+  const showUnits = usePref("showUnits");
+  const keepAdding = usePref("keepAdding");
+  const newItems = usePref("newItems");
   const addLabel = `Add to ${monthName(month)}`;
   const stickyOffset = { closed: 0, opened: insets.bottom };
 

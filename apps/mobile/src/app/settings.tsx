@@ -14,7 +14,7 @@ import { Text } from "@/components/Text";
 import { TOGGLE_SLIDE_MS, Toggle } from "@/components/Toggle";
 import { useCurrentMonth, useCurrentUser, useStoreQuery } from "@/data/HouseholdProvider";
 import { useAppUpdate, type UpdateStatus } from "@/data/appUpdate";
-import { setPrefs, usePrefs, type CheckedItems, type GroupLabel } from "@/data/prefs";
+import { setPrefs, useInstantPref, usePref, usePrefs, type CheckedItems, type GroupLabel } from "@/data/prefs";
 import { displayHost } from "@/data/server";
 import { updateSession, useSession } from "@/data/session";
 import { goBack } from "@/lib/navigation";
@@ -30,10 +30,8 @@ const APPLY_AFTER_MS = TOGGLE_SLIDE_MS + 40;
 const SAMPLE_GROUP = { name: "Produce", icon: "carrot", color: "#5D7627" };
 
 /** One Group labels choice, previewed as a list row would show it. */
-const GroupLabelTile = ({ value, label }: { value: GroupLabel; label: string }) => {
+const GroupLabelTile = ({ value, label, selected, onSelect }: { value: GroupLabel; label: string; selected: boolean; onSelect: () => void }) => {
   const { colors } = useTheme();
-  const { groupLabel } = usePrefs();
-  const selected = groupLabel === value;
   return (
     <Tap
       accessibilityRole="radio"
@@ -41,7 +39,7 @@ const GroupLabelTile = ({ value, label }: { value: GroupLabel; label: string }) 
       accessibilityLabel={`Group labels: ${label}`}
       feedback="select"
       onPress={() => {
-        if (!selected) setPrefs({ groupLabel: value });
+        if (!selected) onSelect();
       }}
       style={styles.tile}
     >
@@ -153,7 +151,8 @@ const PrefToggle = ({
 
 const ThemeTile = ({ mode, label }: { mode: ThemeMode; label: string }) => {
   const { colors } = useTheme();
-  const { themeMode, accent } = usePrefs();
+  const themeMode = usePref("themeMode");
+  const accent = usePref("accent");
   const selected = themeMode === mode;
   const transition = useAppearanceTransition();
   const light = buildPalette({ scheme: "light", accent });
@@ -199,7 +198,7 @@ const ThemeTile = ({ mode, label }: { mode: ThemeMode; label: string }) => {
 
 const Swatch = ({ name }: { name: AccentName }) => {
   const { colors } = useTheme();
-  const { accent } = usePrefs();
+  const accent = usePref("accent");
   const selected = accent === name;
   const transition = useAppearanceTransition();
   return (
@@ -332,6 +331,9 @@ export default function Settings() {
   const user = useCurrentUser();
   const { serverUrl } = useSession();
   const prefs = usePrefs();
+  const [checkedItems, setCheckedItems] = useInstantPref("checkedItems");
+  const [newItems, setNewItems] = useInstantPref("newItems");
+  const [groupLabel, setGroupLabel] = useInstantPref("groupLabel");
   const people = useStoreQuery((store) => liveUsers({ store }).map((person) => person.name), []);
   const groupCount = useStoreQuery((store) => liveGroups({ store }).length, []);
 
@@ -400,8 +402,8 @@ export default function Settings() {
               key={option.value}
               label={option.label}
               description={option.description}
-              selected={prefs.checkedItems === option.value}
-              onSelect={() => setPrefs({ checkedItems: option.value })}
+              selected={checkedItems === option.value}
+              onSelect={() => setCheckedItems(option.value)}
             />
           ))}
         </View>
@@ -417,8 +419,8 @@ export default function Settings() {
               key={option.value}
               label={option.label}
               description={option.description}
-              selected={prefs.newItems === option.value}
-              onSelect={() => setPrefs({ newItems: option.value })}
+              selected={newItems === option.value}
+              onSelect={() => setNewItems(option.value)}
             />
           ))}
         </View>
@@ -429,8 +431,8 @@ export default function Settings() {
           </Text>
         </View>
         <View style={styles.tiles}>
-          <GroupLabelTile value="name" label="Full name" />
-          <GroupLabelTile value="icon" label="Icon only" />
+          <GroupLabelTile value="name" label="Full name" selected={groupLabel === "name"} onSelect={() => setGroupLabel("name")} />
+          <GroupLabelTile value="icon" label="Icon only" selected={groupLabel === "icon"} onSelect={() => setGroupLabel("icon")} />
         </View>
 
         <AppSection />

@@ -23,7 +23,7 @@ import { Screen } from "@/components/Screen";
 import { Tap, haptic } from "@/components/Tap";
 import { Text } from "@/components/Text";
 import { useHousehold, useStoreQuery } from "@/data/HouseholdProvider";
-import { usePrefs } from "@/data/prefs";
+import { usePref } from "@/data/prefs";
 import { goBack } from "@/lib/navigation";
 import { useTheme } from "@/theme/ThemeProvider";
 
@@ -53,7 +53,7 @@ export default function ItemDetail() {
   const patchDraft = (patch: Partial<Draft>) => setDraft((previous) => (previous ? { ...previous, ...patch } : previous));
   const addedBy = useStoreQuery((store) => (item ? readUser({ store, id: item.addedBy }) : undefined), [item?.addedBy]);
   const unitHints = useStoreQuery((store) => suggestUnits({ store, name: draft?.name ?? "" }), [draft?.name]);
-  const { showUnits } = usePrefs();
+  const showUnits = usePref("showUnits");
 
   if (!item || item.deletedAt !== undefined || !draft) {
     return (

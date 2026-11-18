@@ -43,7 +43,7 @@ import { UNDO_MS, UndoSnackbar } from "@/components/UndoSnackbar";
 import { HOLD_MS, Tap, haptic } from "@/components/Tap";
 import { Text } from "@/components/Text";
 import { useCurrentMonth, useHousehold, useHouseholdState, useStoreQuery } from "@/data/HouseholdProvider";
-import { setPrefs, usePrefs, type ListView } from "@/data/prefs";
+import { setPrefs, usePref, type ListView } from "@/data/prefs";
 import { updateSession, useSession } from "@/data/session";
 import { setExpandOrigin, useOriginHidden } from "@/lib/expandOrigin";
 import { ROW_LAYOUT } from "@/theme/motion";
@@ -400,7 +400,9 @@ export default function ListScreen() {
   const monthSheet = useRef<SheetRef>(null);
   const viewSheet = useRef<SheetRef>(null);
   const updateSheet = useRef<SheetRef>(null);
-  const { listView, checkedItems, checkedCollapsed } = usePrefs();
+  const listView = usePref("listView");
+  const checkedItems = usePref("checkedItems");
+  const checkedCollapsed = usePref("checkedCollapsed");
 
   const view = useStoreQuery(
     (store) => buildMonthView({ store, month, search, checkedLast: checkedItems !== "stay", checkedApart: checkedItems === "section" }),

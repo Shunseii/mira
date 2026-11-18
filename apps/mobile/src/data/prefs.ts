@@ -1,6 +1,8 @@
 import type { NewItemPlacement } from "@mira/shared";
 import { deviceStorage } from "@/lib/deviceStorage";
+import { useSyncExternalStore } from "react";
 import { createExternalStore, useExternalStore } from "@/lib/externalStore";
+import { useInstantChoice } from "@/lib/useInstantChoice";
 import { isAccentName, type AccentName, type ThemeMode } from "@/theme/tokens";
 
 /** Per-device, per-person look. Never synced: "others keep their own". */
@@ -60,7 +62,14 @@ const prefsStore = createExternalStore<Prefs>(load());
 
 export const usePrefs = (): Prefs => useExternalStore(prefsStore);
 
+/** One pref. Re-renders only when that pref changes, not on every settings tap. */
+export const usePref = <K extends keyof Prefs>(key: K): Prefs[K] => useSyncExternalStore(prefsStore.subscribe, () => prefsStore.get()[key]);
+
 export const setPrefs = (patch: Partial<Prefs>): void => {
   prefsStore.set((previous) => ({ ...previous, ...patch }));
   deviceStorage.set(KEY, JSON.stringify(prefsStore.get()));
 };
+
+/** A pref for a picker: the pick shows at once and is saved a frame later (see useInstantChoice). */
+export const useInstantPref = <K extends keyof Prefs>(key: K): [Prefs[K], (value: Prefs[K]) => void] =>
+  useInstantChoice({ value: usePref(key), onChange: (value) => setPrefs({ [key]: value } as Partial<Prefs>) });

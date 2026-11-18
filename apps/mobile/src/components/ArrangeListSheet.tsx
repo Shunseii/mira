@@ -1,6 +1,7 @@
 import { forwardRef } from "react";
 import { StyleSheet, View } from "react-native";
 import type { ListView } from "@/data/prefs";
+import { useInstantChoice } from "@/lib/useInstantChoice";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Icon, type IconName } from "./Icon";
 import { SquircleFill } from "./Squircle";
@@ -32,11 +33,12 @@ const OPTIONS: {
 export const ArrangeListSheet = forwardRef<SheetRef, { value: ListView; onChange: (view: ListView) => void; onReorder: () => void }>(
   ({ value, onChange, onReorder }, ref) => {
     const { colors } = useTheme();
+    const [shown, choose] = useInstantChoice({ value, onChange });
     return (
       <Sheet ref={ref} title="Arrange list">
         <View style={[styles.options, { borderTopColor: colors.line }]}>
           {OPTIONS.map((option) => {
-            const selected = option.view === value;
+            const selected = option.view === shown;
             return (
               <Tap
                 key={option.view}
@@ -46,7 +48,7 @@ export const ArrangeListSheet = forwardRef<SheetRef, { value: ListView; onChange
                 accessibilityHint={option.description}
                 feedback="select"
                 pressScale={0.98}
-                onPress={() => onChange(option.view)}
+                onPress={() => choose(option.view)}
                 style={styles.option}
               >
                 <SquircleFill

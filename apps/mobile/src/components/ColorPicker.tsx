@@ -15,7 +15,7 @@ import { ScrollView, StyleSheet, View, type LayoutChangeEvent } from "react-nati
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
-import { usePrefs } from "@/data/prefs";
+import { usePref } from "@/data/prefs";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS, buildPalette, tint } from "@/theme/tokens";
 import { GroupChip, GroupFill } from "./GroupBadge";
@@ -256,7 +256,7 @@ const HUE_STOPS = Array.from({ length: 13 }, (_, i) => hexFromHue({ hue: i * 30,
 
 /** How the colour looks in one theme: the list header chip and a group-picker row. */
 const ThemePreview = ({ scheme, hex, icon, name }: { scheme: "light" | "dark"; hex: string; icon: string | undefined; name: string }) => {
-  const { accent } = usePrefs();
+  const accent = usePref("accent");
   const palette = buildPalette({ scheme, accent });
   const tone: GroupTone = groupTone({ hex, scheme, pageBackground: palette.bg });
   return (

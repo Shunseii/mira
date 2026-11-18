@@ -9,7 +9,7 @@ import { SquircleFill } from "@/components/Squircle";
 import { Text } from "@/components/Text";
 import { UnitSheet, UnitSuggestions } from "@/components/UnitPicker";
 import { useCurrentMonth, useStoreQuery } from "@/data/HouseholdProvider";
-import { usePrefs } from "@/data/prefs";
+import { usePref } from "@/data/prefs";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS } from "@/theme/tokens";
 
@@ -37,7 +37,7 @@ export const ItemFields = ({
 }) => {
   const { colors } = useTheme();
   const current = useCurrentMonth();
-  const { showUnits } = usePrefs();
+  const showUnits = usePref("showUnits");
   const group = useStoreQuery((store) => (value.groupId ? readGroup({ store, id: value.groupId }) : undefined), [value.groupId]);
   const liveGroup = group && group.deletedAt === undefined ? group : undefined;
   const groupSheet = useRef<SheetRef>(null);

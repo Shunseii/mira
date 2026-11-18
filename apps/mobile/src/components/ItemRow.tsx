@@ -2,7 +2,7 @@ import { formatQuantity, isGroupIcon, type Group, type Item } from "@mira/shared
 import { memo, useEffect, type ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, { LayoutAnimationConfig, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
-import { usePrefs } from "@/data/prefs";
+import { usePref } from "@/data/prefs";
 import { SPRING_POP } from "@/theme/motion";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS, SEPARATOR_HEIGHT, TAP } from "@/theme/tokens";
@@ -109,7 +109,8 @@ export const GroupLine = ({ group, dimmed = false }: { group: Pick<Group, "name"
 export const ItemRow = memo(({ item, pending, onPress, onLongPress, onDelete, onEdit, grip, group, lifted }: ItemRowProps) => {
   const { colors } = useTheme();
   const checked = item.checkedAt !== undefined;
-  const { showUnits, groupLabel } = usePrefs();
+  const showUnits = usePref("showUnits");
+  const groupLabel = usePref("groupLabel");
   const quantity = formatQuantity({ qty: item.qty, unit: showUnits ? item.unit : undefined });
   // One line on the list; the full note stays on Item detail.
   const note = item.note?.replace(/\s+/g, " ").trim() || undefined;
