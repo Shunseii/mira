@@ -5407,7 +5407,7 @@
         "align-items": "center",
         "align-self": "stretch",
         "background": "{color.surface}",
-        "border-radius": "14px",
+        "border-radius": "21px",
         "box-shadow": "inset 0 0 0 1.5px {color.line}",
         "display": "flex",
         "flex-direction": "row",
@@ -5416,7 +5416,8 @@
         "height": "56px",
         "padding": "0px 16px",
         "position": "relative",
-        "width": "auto"
+        "width": "auto",
+        "corner-shape": "squircle"
       },
       "type": "frame"
     },
@@ -6109,14 +6110,15 @@
       "style": {
         "align-items": "center",
         "background": "{color.accent}",
-        "border-radius": "20px",
+        "border-radius": "50%",
         "box-shadow": "0px 6px 18px 0px {color.shadow-accent}",
         "display": "flex",
         "flex-direction": "row",
         "height": "64px",
         "justify-content": "center",
         "position": "relative",
-        "width": "64px"
+        "width": "64px",
+        "corner-shape": "squircle"
       },
       "type": "frame",
       "x": 2600,
@@ -9745,13 +9747,14 @@
       "style": {
         "align-items": "center",
         "background": "{color.surface-2}",
-        "border-radius": "14px",
+        "border-radius": "21px",
         "display": "flex",
         "flex-direction": "row",
         "height": "44px",
         "justify-content": "center",
         "position": "relative",
-        "width": "44px"
+        "width": "44px",
+        "corner-shape": "squircle"
       },
       "type": "frame",
       "x": 2600,
@@ -10521,14 +10524,15 @@
       "style": {
         "align-items": "center",
         "background": "{color.surface-2}",
-        "border-radius": "14px",
+        "border-radius": "21px",
         "display": "flex",
         "flex-direction": "row",
         "gap": "10px",
         "height": "44px",
         "padding": "0px 14px",
         "position": "relative",
-        "width": "353px"
+        "width": "353px",
+        "corner-shape": "squircle"
       },
       "type": "frame",
       "x": 2600,
@@ -14404,14 +14408,15 @@
       "style": {
         "align-items": "center",
         "background": "{color.accent}",
-        "border-radius": "16px",
+        "border-radius": "24px",
         "display": "flex",
         "flex-direction": "row",
         "gap": "8px",
         "height": "56px",
         "justify-content": "center",
         "position": "relative",
-        "width": "353px"
+        "width": "353px",
+        "corner-shape": "squircle"
       },
       "type": "frame",
       "x": 2600,

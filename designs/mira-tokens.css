@@ -50,6 +50,8 @@
   --color-warn-soft: var(--warn-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
+  --color-danger-fill: var(--danger-fill);
+  --color-on-danger-fill: var(--on-danger-fill);
   --color-transparent: var(--transparent);
   --color-shadow: var(--shadow);
   --color-shadow-strong: var(--shadow-strong);
@@ -164,6 +166,8 @@
   --warn: #946200;
   --warn-soft: #F6E8C8;
   --danger: #B4502B;
+  --danger-fill: #B4502B;
+  --on-danger-fill: #FFF8F1;
   --danger-soft: #EBD7CA;
   --transparent: #00000000;
   --shadow: #221E1926;
@@ -275,6 +279,8 @@
   --warn: #E2B04F;
   --warn-soft: #3A2E12;
   --danger: #E07A52;
+  --danger-fill: #6E3220;
+  --on-danger-fill: #F6DCCD;
   --danger-soft: #48291C;
   --transparent: #00000000;
   --shadow: #00000066;
