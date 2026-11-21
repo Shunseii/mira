@@ -124,7 +124,8 @@ type HeaderRow = {
   /** The collapsible Checked section at the bottom (when checked items go to their own section). */
   checkedSection?: { collapsed: boolean };
 };
-type ItemRowData = { kind: "item"; key: string; item: Item; group?: Group };
+/** `hidden`: a checked item while Checked is folded. It stays mounted so unfolding is only a style change. */
+type ItemRowData = { kind: "item"; key: string; item: Item; group?: Group; hidden?: boolean };
 type Row = HeaderRow | ItemRowData;
 
 const buildRows = ({
@@ -139,7 +140,7 @@ const buildRows = ({
   checkedCollapsed: boolean;
 }): Row[] => [...listRows({ view, listView, groupsById }), ...checkedRows({ view, groupsById, collapsed: checkedCollapsed })];
 
-/** The Checked section: one collapsible header after everything else, then (when open) the checked items with their group shown. */
+/** The Checked section: one collapsible header after everything else, then the checked items with their group shown. */
 const checkedRows = ({ view, groupsById, collapsed }: { view: MonthView; groupsById: Map<string, Group>; collapsed: boolean }): Row[] => {
   if (view.checked.length === 0) return [];
   const header: Row = {
@@ -150,10 +151,11 @@ const checkedRows = ({ view, groupsById, collapsed }: { view: MonthView; groupsB
     itemIds: view.checked.map((item) => item.id),
     checkedSection: { collapsed },
   };
-  if (collapsed) return [header];
   return [
     header,
-    ...view.checked.map((item): Row => ({ kind: "item", key: item.id, item, group: item.groupId ? groupsById.get(item.groupId) : undefined })),
+    ...view.checked.map(
+      (item): Row => ({ kind: "item", key: item.id, item, group: item.groupId ? groupsById.get(item.groupId) : undefined, hidden: collapsed }),
+    ),
   ];
 };
 
@@ -397,37 +399,39 @@ type RowHandlers = {
  * to delete, hold to pick it up and drag it (which also starts reorder mode).
  * In reorder mode, holding an unchecked item picks it up and nothing else on the row reacts.
  */
-const DraggableItem = memo(
+/**
+ * Everything below the list cell's context. The cell context changes whenever a row's index shifts (a check
+ * that moves an item renumbers every row after it), so the swipeable row itself only re-renders when its
+ * own props do.
+ */
+const RowContent = memo(
   ({
     item,
     group,
-    month,
     pending,
     handlers,
     reorderMode,
+    active,
+    onLongPress,
   }: {
     item: Item;
     group?: Group;
-    month: MonthKey;
     pending: boolean;
     handlers: RowHandlers;
     reorderMode: boolean;
+    active: boolean;
+    onLongPress: () => void;
   }) => {
-    const drag = useReorderableDrag();
-    const active = useIsActive();
     const checked = item.checkedAt !== undefined;
-
+    const onDelete = useCallback(() => handlers.onDelete(item), [handlers, item]);
     return (
-      <SwipeToDelete enabled={!reorderMode} onDelete={() => handlers.onDelete(item)}>
+      <SwipeToDelete enabled={!reorderMode} onDelete={onDelete}>
         <ItemRow
           item={item}
           group={group}
           pending={pending}
           onPress={reorderMode ? noop : handlers.onPress}
-          onLongPress={() => {
-            const pickUp = reorderMode || handlers.onHold(item);
-            if (pickUp && !checked) drag();
-          }}
+          onLongPress={onLongPress}
           onDelete={reorderMode ? undefined : handlers.onDelete}
           onEdit={reorderMode ? undefined : handlers.onEdit}
           // In reorder mode the grip marks what can move; the row itself is what you hold.
@@ -435,6 +439,53 @@ const DraggableItem = memo(
           lifted={active}
         />
       </SwipeToDelete>
+    );
+  },
+);
+RowContent.displayName = "RowContent";
+
+/**
+ * An item row inside the reorderable list. Normally: tap to check, swipe left
+ * to delete, hold to pick it up and drag it (which also starts reorder mode).
+ * In reorder mode, holding an unchecked item picks it up and nothing else on the row reacts.
+ */
+const DraggableItem = memo(
+  ({
+    item,
+    group,
+    pending,
+    handlers,
+    reorderMode,
+  }: {
+    item: Item;
+    group?: Group;
+    pending: boolean;
+    handlers: RowHandlers;
+    reorderMode: boolean;
+  }) => {
+    const drag = useReorderableDrag();
+    const active = useIsActive();
+    const checked = item.checkedAt !== undefined;
+    // Read through a ref so a renumbered cell (new drag handler) doesn't re-render the row.
+    const dragRef = useRef(drag);
+    useEffect(() => {
+      dragRef.current = drag;
+    }, [drag]);
+    const onLongPress = useCallback(() => {
+      const pickUp = reorderMode || handlers.onHold(item);
+      if (pickUp && !checked) dragRef.current();
+    }, [checked, handlers, item, reorderMode]);
+
+    return (
+      <RowContent
+        item={item}
+        group={group}
+        pending={pending}
+        handlers={handlers}
+        reorderMode={reorderMode}
+        active={active}
+        onLongPress={onLongPress}
+      />
     );
   },
 );
@@ -472,6 +523,7 @@ export default function ListScreen() {
   const [stableGroup] = useState(createStabilizer<Group>);
   const rows = useMemo(
     () =>
+
       buildRows({ view, listView, groupsById, checkedCollapsed }).map((row) =>
         row.kind === "item"
           ? { ...row, item: stableItem(row.item.id, row.item), group: row.group && stableGroup(row.group.id, row.group) }
@@ -625,16 +677,17 @@ export default function ListScreen() {
       row.kind === "header" ? (
         <SectionHeader row={row} onCheckAll={reorderMode ? undefined : checkAll} onToggleChecked={toggleChecked} />
       ) : (
-        <DraggableItem
-          item={row.item}
-          group={row.group}
-          month={month}
-          pending={pendingSet.has(`items/${row.item.id}`)}
-          handlers={handlers}
-          reorderMode={reorderMode}
-        />
+        <View style={row.hidden && styles.folded}>
+          <DraggableItem
+            item={row.item}
+            group={row.group}
+            pending={pendingSet.has(`items/${row.item.id}`)}
+            handlers={handlers}
+            reorderMode={reorderMode}
+          />
+        </View>
       ),
-    [checkAll, handlers, month, pendingSet, reorderMode, toggleChecked],
+    [checkAll, handlers, pendingSet, reorderMode, toggleChecked],
   );
 
   return (
@@ -809,6 +862,7 @@ const styles = StyleSheet.create({
   },
   /** Widened so selected rows' tint has room past the content edge; rows pad themselves back in. */
   rows: { paddingTop: 4, marginHorizontal: -ROW_INSET },
+  folded: { display: "none" },
   headerInset: { paddingHorizontal: ROW_INSET },
   priorityHeader: { paddingTop: 20, paddingBottom: 8 },
   dropIndicatorInset: { paddingHorizontal: ROW_INSET },
