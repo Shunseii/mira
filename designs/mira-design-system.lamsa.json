@@ -5409,6 +5409,7 @@
         "background": "{color.surface}",
         "border-radius": "21px",
         "box-shadow": "inset 0 0 0 1.5px {color.line}",
+        "corner-shape": "squircle",
         "display": "flex",
         "flex-direction": "row",
         "flex-shrink": "0",
@@ -5416,8 +5417,7 @@
         "height": "56px",
         "padding": "0px 16px",
         "position": "relative",
-        "width": "auto",
-        "corner-shape": "squircle"
+        "width": "auto"
       },
       "type": "frame"
     },
@@ -6112,13 +6112,13 @@
         "background": "{color.accent}",
         "border-radius": "50%",
         "box-shadow": "0px 6px 18px 0px {color.shadow-accent}",
+        "corner-shape": "squircle",
         "display": "flex",
         "flex-direction": "row",
         "height": "64px",
         "justify-content": "center",
         "position": "relative",
-        "width": "64px",
-        "corner-shape": "squircle"
+        "width": "64px"
       },
       "type": "frame",
       "x": 2600,
@@ -9748,13 +9748,13 @@
         "align-items": "center",
         "background": "{color.surface-2}",
         "border-radius": "21px",
+        "corner-shape": "squircle",
         "display": "flex",
         "flex-direction": "row",
         "height": "44px",
         "justify-content": "center",
         "position": "relative",
-        "width": "44px",
-        "corner-shape": "squircle"
+        "width": "44px"
       },
       "type": "frame",
       "x": 2600,
@@ -10525,14 +10525,14 @@
         "align-items": "center",
         "background": "{color.surface-2}",
         "border-radius": "21px",
+        "corner-shape": "squircle",
         "display": "flex",
         "flex-direction": "row",
         "gap": "10px",
         "height": "44px",
         "padding": "0px 14px",
         "position": "relative",
-        "width": "353px",
-        "corner-shape": "squircle"
+        "width": "353px"
       },
       "type": "frame",
       "x": 2600,
@@ -14409,14 +14409,14 @@
         "align-items": "center",
         "background": "{color.accent}",
         "border-radius": "24px",
+        "corner-shape": "squircle",
         "display": "flex",
         "flex-direction": "row",
         "gap": "8px",
         "height": "56px",
         "justify-content": "center",
         "position": "relative",
-        "width": "353px",
-        "corner-shape": "squircle"
+        "width": "353px"
       },
       "type": "frame",
       "x": 2600,
@@ -15880,7 +15880,7 @@
       "name": "Count",
       "parentId": "MttSzFB1",
       "style": {
-        "color": "{color.ink-3}",
+        "color": "{color.ink-2}",
         "flex-shrink": "0",
         "font-family": "{font.body}",
         "font-size": "13px",

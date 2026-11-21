@@ -87,6 +87,7 @@
   --color-accent-indigo: var(--accent-indigo);
   --color-accent-plum: var(--accent-plum);
   --color-accent-saffron: var(--accent-saffron);
+  --color-on-accent-saffron: var(--on-accent-saffron);
   --color-swatch-ochre: var(--swatch-ochre);
   --color-swatch-teal: var(--swatch-teal);
   --color-swatch-terracotta: var(--swatch-terracotta);
@@ -123,7 +124,7 @@
   --surface-2: #ECE5D7;
   --ink: #221E19;
   --ink-2: #6B6358;
-  --ink-3: #A39A8C;
+  --ink-3: #8A8174;
   --line: #E2D9C9;
   --accent: #B4502B;
   --accent-soft: #EBD7CA;
@@ -204,6 +205,7 @@
   --accent-indigo: #4A57A3;
   --accent-plum: #8A3D68;
   --accent-saffron: #C48716;
+  --on-accent-saffron: #221E19;
   --swatch-ochre: #8D6300;
   --swatch-teal: #087C77;
   --swatch-terracotta: #AC4A1E;
@@ -236,7 +238,7 @@
   --surface-2: #3A332B;
   --ink: #F2EBDD;
   --ink-2: #B9AE9E;
-  --ink-3: #7E7468;
+  --ink-3: #908679;
   --line: #352E27;
   --accent: #BD6544;
   --accent-soft: #48291C;
@@ -317,6 +319,7 @@
   --accent-indigo: #4A57A3;
   --accent-plum: #8A3D68;
   --accent-saffron: #C48716;
+  --on-accent-saffron: #221E19;
   --swatch-ochre: #8D6300;
   --swatch-teal: #087C77;
   --swatch-terracotta: #AC4A1E;
