@@ -20,7 +20,6 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BackHandler, RefreshControl, StyleSheet, TextInput, View } from "react-native";
 import Animated, {
   FadeIn,
-  FadeOut,
   LayoutAnimationConfig,
   useAnimatedStyle,
   useSharedValue,
@@ -66,9 +65,6 @@ const FAB_SIZE = 64;
 const SEARCH_HEIGHT = 44;
 const SEARCH_RADIUS = 14;
 
-/** Rows that arrive (added, synced in, restored, the Checked section opening) fade in; rows that leave fade out. */
-const ROW_ENTER = FadeIn.duration(180);
-const ROW_EXIT = FadeOut.duration(120);
 /** How far a new month's list slides in from the side it came from. */
 const MONTH_SHIFT = 24;
 const MONTH_FADE_MS = 180;
@@ -627,20 +623,16 @@ export default function ListScreen() {
   const renderRow = useCallback(
     ({ item: row }: { item: Row }) =>
       row.kind === "header" ? (
-        <Animated.View entering={ROW_ENTER} exiting={ROW_EXIT}>
-          <SectionHeader row={row} onCheckAll={reorderMode ? undefined : checkAll} onToggleChecked={toggleChecked} />
-        </Animated.View>
+        <SectionHeader row={row} onCheckAll={reorderMode ? undefined : checkAll} onToggleChecked={toggleChecked} />
       ) : (
-        <Animated.View entering={ROW_ENTER} exiting={ROW_EXIT}>
-          <DraggableItem
-            item={row.item}
-            group={row.group}
-            month={month}
-            pending={pendingSet.has(`items/${row.item.id}`)}
-            handlers={handlers}
-            reorderMode={reorderMode}
-          />
-        </Animated.View>
+        <DraggableItem
+          item={row.item}
+          group={row.group}
+          month={month}
+          pending={pendingSet.has(`items/${row.item.id}`)}
+          handlers={handlers}
+          reorderMode={reorderMode}
+        />
       ),
     [checkAll, handlers, month, pendingSet, reorderMode, toggleChecked],
   );
@@ -690,42 +682,39 @@ export default function ListScreen() {
 
         <LayoutAnimationConfig skipEntering>
           <Animated.View key={month} entering={monthEntering(place.direction)} style={styles.rows}>
-            {/* A month's rows arrive with the month, not one by one. */}
-            <LayoutAnimationConfig skipEntering skipExiting>
-              {rows.length === 0 ? <EmptyState searching={search.trim() !== ""} /> : null}
-              <NestedReorderableList
-                data={rows}
-                // Lists are short: render every row in the first pass instead of
-                // FlatList's default batches, so a month appears complete at once.
-                initialNumToRender={Math.max(rows.length, 20)}
-                maxToRenderPerBatch={100}
-                windowSize={41}
-                keyExtractor={(row) => row.key}
-                renderItem={renderRow}
-                onReorder={onReorder}
-                onDragStart={() => {
-                  "worklet";
-                  scheduleOnRN(haptic, "medium");
-                }}
-                onDragEnd={() => {
-                  "worklet";
-                  scheduleOnRN(haptic, "light");
-                }}
-                shouldUpdateActiveItem
-                // The same in and out of reorder mode, so entering it mid-hold doesn't cancel the drag.
-                // The pan only takes over once a row has been held, so a plain swipe always scrolls.
-                dragEnabled
-                panEnabled
-                panActivateAfterLongPress={PAN_AFTER_HOLD_MS}
-                itemLayoutAnimation={ROW_LAYOUT}
-                scrollEnabled={false}
-                renderDropIndicator={() => (
-                  <View style={styles.dropIndicatorInset}>
-                    <View style={[styles.dropIndicator, { backgroundColor: colors.accent }]} />
-                  </View>
-                )}
-              />
-            </LayoutAnimationConfig>
+            {rows.length === 0 ? <EmptyState searching={search.trim() !== ""} /> : null}
+            <NestedReorderableList
+              data={rows}
+              // Lists are short: render every row in the first pass instead of
+              // FlatList's default batches, so a month appears complete at once.
+              initialNumToRender={Math.max(rows.length, 20)}
+              maxToRenderPerBatch={100}
+              windowSize={41}
+              keyExtractor={(row) => row.key}
+              renderItem={renderRow}
+              onReorder={onReorder}
+              onDragStart={() => {
+                "worklet";
+                scheduleOnRN(haptic, "medium");
+              }}
+              onDragEnd={() => {
+                "worklet";
+                scheduleOnRN(haptic, "light");
+              }}
+              shouldUpdateActiveItem
+              // The same in and out of reorder mode, so entering it mid-hold doesn't cancel the drag.
+              // The pan only takes over once a row has been held, so a plain swipe always scrolls.
+              dragEnabled
+              panEnabled
+              panActivateAfterLongPress={PAN_AFTER_HOLD_MS}
+              itemLayoutAnimation={ROW_LAYOUT}
+              scrollEnabled={false}
+              renderDropIndicator={() => (
+                <View style={styles.dropIndicatorInset}>
+                  <View style={[styles.dropIndicator, { backgroundColor: colors.accent }]} />
+                </View>
+              )}
+            />
           </Animated.View>
         </LayoutAnimationConfig>
       </ScrollViewContainer>

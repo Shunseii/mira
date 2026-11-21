@@ -23,6 +23,10 @@ import { UpdatePill } from "./UpdateReady";
 /** How long "Synced" stays up after a sync sends this phone's changes. */
 const SYNCED_MS = 2000;
 const SPIN_MS = 900;
+/** One pill state hands over to the next: the old one is gone before the new one shows, so they never overlap. */
+const PILL_OUT_MS = 120;
+const PILL_OUT = FadeOut.duration(PILL_OUT_MS);
+const PILL_IN = FadeIn.duration(180).delay(PILL_OUT_MS);
 
 /** True until `ms` after `at`, then false (re-renders once when it runs out). */
 const useStillRecent = ({ at, ms }: { at: number | undefined; ms: number }): boolean => {
@@ -87,7 +91,7 @@ const SyncPill = ({ state, onPress }: { state: SyncPillState; onPress: () => voi
     synced: "Synced",
   }[state];
   return (
-    <Animated.View entering={FadeIn} exiting={FadeOut}>
+    <Animated.View entering={PILL_IN} exiting={PILL_OUT}>
       <Tap
         unstable_pressDelay={PRESS_DELAY_MS}
         accessibilityRole="button"
