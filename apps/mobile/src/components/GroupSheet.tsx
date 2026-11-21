@@ -5,12 +5,13 @@ import { forwardRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useHousehold, useStoreQuery } from "@/data/HouseholdProvider";
+import { useSheetPick } from "@/lib/useSheetPick";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS } from "@/theme/tokens";
 import { GroupBadge, GroupCard, useGroupCardInk, type GroupLook } from "./GroupBadge";
 import { Icon } from "./Icon";
 import { Sheet, type SheetRef } from "./Sheet";
-import { Tap } from "./Tap";
+import { Tap, PRESS_DELAY_MS } from "./Tap";
 import { Text } from "./Text";
 import { SquircleFill } from "./Squircle";
 
@@ -26,10 +27,13 @@ export const GroupSheet = forwardRef<SheetRef, GroupSheetProps>(({ selectedId, o
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
 
-  const choose = (groupId: string | undefined) => {
-    onSelect(groupId);
-    if (ref && typeof ref === "object") ref.current?.dismiss();
-  };
+  const [shownId, choose] = useSheetPick({
+    selected: selectedId,
+    onSelect,
+    dismiss: () => {
+      if (ref && typeof ref === "object") ref.current?.dismiss();
+    },
+  });
 
   const create = () => {
     if (!newName.trim()) return;
@@ -56,7 +60,7 @@ export const GroupSheet = forwardRef<SheetRef, GroupSheetProps>(({ selectedId, o
         setNewName("");
       }}
       action={
-        <Tap accessibilityRole="button" onPress={editGroups} style={styles.headerAction}>
+        <Tap unstable_pressDelay={PRESS_DELAY_MS} accessibilityRole="button" onPress={editGroups} style={styles.headerAction}>
           <Text variant="bodyStrong" color="accent" style={styles.actionText}>
             Edit groups
           </Text>
@@ -64,13 +68,13 @@ export const GroupSheet = forwardRef<SheetRef, GroupSheetProps>(({ selectedId, o
       }
     >
       <View style={styles.list}>
-        <Option group={undefined} selected={selectedId === undefined} onPress={() => choose(undefined)} label="No group" muted>
+        <Option group={undefined} selected={shownId === undefined} onPress={() => choose(undefined)} label="No group" muted>
           <View style={[styles.noBadge, { backgroundColor: colors.surface2 }]}>
             <Icon name="ban" size={16} color={colors.ink3} />
           </View>
         </Option>
         {groups.map((group) => (
-          <Option key={group.id} group={group} selected={selectedId === group.id} onPress={() => choose(group.id)} label={group.name}>
+          <Option key={group.id} group={group} selected={shownId === group.id} onPress={() => choose(group.id)} label={group.name}>
             <GroupBadge group={group} />
           </Option>
         ))}
@@ -90,7 +94,7 @@ export const GroupSheet = forwardRef<SheetRef, GroupSheetProps>(({ selectedId, o
                 style={[styles.newInput, { color: colors.ink }]}
               />
             </View>
-            <Tap accessibilityRole="button" onPress={create} style={styles.newAdd}>
+            <Tap unstable_pressDelay={PRESS_DELAY_MS} accessibilityRole="button" onPress={create} style={styles.newAdd}>
               <SquircleFill radius={14} color={colors.accent} />
               <Text variant="bodyStrong" color="onAccent">
                 Add
@@ -98,7 +102,7 @@ export const GroupSheet = forwardRef<SheetRef, GroupSheetProps>(({ selectedId, o
             </Tap>
           </Animated.View>
         ) : (
-          <Tap accessibilityRole="button" onPress={() => setCreating(true)} style={styles.newGroup}>
+          <Tap unstable_pressDelay={PRESS_DELAY_MS} accessibilityRole="button" onPress={() => setCreating(true)} style={styles.newGroup}>
             <View style={[styles.noBadge, { borderWidth: 1.5, borderColor: colors.accent }]}>
               <Icon name="plus" size={16} color={colors.accent} />
             </View>
@@ -132,7 +136,7 @@ const Option = ({
   const { colors } = useTheme();
   const { colored, ink, muted: mutedInk } = useGroupCardInk(group);
   return (
-    <Tap accessibilityRole="radio" accessibilityState={{ selected }} feedback="select" pressScale={0.98} onPress={onPress}>
+    <Tap unstable_pressDelay={PRESS_DELAY_MS} accessibilityRole="radio" accessibilityState={{ selected }} feedback="select" pressScale={0.98} onPress={onPress}>
       <GroupCard group={group}>
         {children}
         <Text

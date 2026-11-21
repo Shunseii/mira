@@ -6,7 +6,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { Button } from "./Button";
 import { Icon } from "./Icon";
 import { Sheet, type SheetRef } from "./Sheet";
-import { Tap } from "./Tap";
+import { Tap, PRESS_DELAY_MS } from "./Tap";
 import { Text } from "./Text";
 
 /** "Update ready" in the list header, once a new version has downloaded. */
@@ -15,6 +15,7 @@ export const UpdatePill = ({ onPress }: { onPress: () => void }) => {
   return (
     <Animated.View entering={FadeIn} exiting={FadeOut}>
       <Tap
+        unstable_pressDelay={PRESS_DELAY_MS}
         accessibilityRole="button"
         accessibilityLabel="Update ready. Tap to restart Mira"
         onPress={onPress}
@@ -60,8 +61,8 @@ export const UpdateSheet = forwardRef<SheetRef>((_, ref) => {
       }
     >
       <View style={styles.actions}>
-        <Button label="Restart now" onPress={() => void restart()} busy={restarting} />
-        <Tap accessibilityRole="button" onPress={() => sheet.current?.dismiss()} style={styles.later}>
+        <Button pressDelay={PRESS_DELAY_MS} label="Restart now" onPress={() => void restart()} busy={restarting} />
+        <Tap unstable_pressDelay={PRESS_DELAY_MS} accessibilityRole="button" onPress={() => sheet.current?.dismiss()} style={styles.later}>
           <Text variant="bodyStrong">Later</Text>
         </Tap>
       </View>

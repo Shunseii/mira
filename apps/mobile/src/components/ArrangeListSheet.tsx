@@ -6,7 +6,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { Icon, type IconName } from "./Icon";
 import { SquircleFill } from "./Squircle";
 import { Sheet, type SheetRef } from "./Sheet";
-import { Tap } from "./Tap";
+import { Tap, PRESS_DELAY_MS } from "./Tap";
 import { Text } from "./Text";
 
 const OPTIONS: {
@@ -41,6 +41,7 @@ export const ArrangeListSheet = forwardRef<SheetRef, { value: ListView; onChange
             const selected = option.view === shown;
             return (
               <Tap
+                unstable_pressDelay={PRESS_DELAY_MS}
                 key={option.view}
                 accessibilityRole="radio"
                 accessibilityState={{ selected }}
@@ -74,6 +75,7 @@ export const ArrangeListSheet = forwardRef<SheetRef, { value: ListView; onChange
           })}
         </View>
         <Tap
+          unstable_pressDelay={PRESS_DELAY_MS}
           accessibilityRole="button"
           accessibilityHint="Shows a handle on each item to drag it into place"
           feedback="select"

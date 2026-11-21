@@ -160,7 +160,9 @@ export const ItemRow = memo(({ item, pending, onPress, onLongPress, onDelete, on
               </Text>
 
               {group && groupLabel === "icon" ? <GroupTile group={group} dimmed={checked} /> : null}
-              {pending ? <Icon name="cloud-upload" size={14} color={colors.accent} /> : null}
+              {pending ? (
+                <View accessibilityLabel="Waiting to sync" style={[styles.pendingDot, { backgroundColor: colors.ink3 }]} />
+              ) : null}
             </View>
             {/* Then the group badge (By priority, Name labels) and the note (up to two lines), each on its own line. */}
             {badge ? <GroupLine group={badge} dimmed={checked} /> : null}
@@ -194,7 +196,10 @@ export const ItemRow = memo(({ item, pending, onPress, onLongPress, onDelete, on
 });
 ItemRow.displayName = "ItemRow";
 
+const PENDING_DOT = 6;
+
 const styles = StyleSheet.create({
+  pendingDot: { width: PENDING_DOT, height: PENDING_DOT, borderRadius: PENDING_DOT / 2 },
   /** Rows sit in a list widened by ROW_INSET on each side; the padding keeps content on the page's edge. */
   row: {
     minHeight: 60,

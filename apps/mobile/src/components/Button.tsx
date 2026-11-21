@@ -13,18 +13,20 @@ export const BUTTON_RADIUS = 16;
 type ButtonProps = {
   label: string;
   onPress: () => void;
-  kind?: "primary" | "dark" | "soft";
+  kind?: "primary" | "dark" | "soft" | "danger";
   icon?: IconName;
   busy?: boolean;
   disabled?: boolean;
   compact?: boolean;
   style?: StyleProp<ViewStyle>;
+  /** PRESS_DELAY_MS when the button sits inside a scroll view. */
+  pressDelay?: number;
 };
 
-export const Button = ({ label, onPress, kind = "primary", icon, busy, disabled, compact, style }: ButtonProps) => {
+export const Button = ({ label, onPress, kind = "primary", icon, busy, disabled, compact, style, pressDelay }: ButtonProps) => {
   const { colors } = useTheme();
-  const background = kind === "primary" ? colors.accent : kind === "dark" ? colors.ink : colors.surface2;
-  const foreground = kind === "primary" ? colors.onAccent : kind === "dark" ? colors.bg : colors.ink;
+  const background = { primary: colors.accent, dark: colors.ink, soft: colors.surface2, danger: colors.dangerFill }[kind];
+  const foreground = { primary: colors.onAccent, dark: colors.bg, soft: colors.ink, danger: colors.onDangerFill }[kind];
   return (
     <Tap
       accessibilityRole="button"
@@ -33,6 +35,7 @@ export const Button = ({ label, onPress, kind = "primary", icon, busy, disabled,
       disabled={disabled || busy}
       dimWhenDisabled={false}
       feedback="light"
+      unstable_pressDelay={pressDelay}
       style={[styles.base, compact ? styles.compact : styles.full, style]}
     >
       <SquircleFill radius={BUTTON_RADIUS} color={background} />

@@ -19,6 +19,7 @@ import { Icon } from "@/components/Icon";
 import { ItemFields } from "@/components/ItemFields";
 import { parseQuantity } from "@/components/ItemOptions";
 import { NameField } from "@/components/NameField";
+import { NavBar } from "@/components/NavBar";
 import { Screen } from "@/components/Screen";
 import { Tap, haptic } from "@/components/Tap";
 import { Text } from "@/components/Text";
@@ -88,26 +89,23 @@ export default function ItemDetail() {
   return (
     <Screen>
       <KeyboardAvoidingView behavior="padding" style={styles.flex}>
-        <View style={styles.nav}>
-          <Tap accessibilityRole="button" onPress={() => goBack()} style={styles.back}>
-            <Icon name="chevron-left" size={20} color={colors.accent} />
-            <Text variant="bodyStrong" color="accent" style={styles.backLabel}>
-              {monthName(item.listId)}
-            </Text>
-          </Tap>
-          <Tap
-            accessibilityRole="button"
-            accessibilityLabel="Delete item"
-            feedback="medium"
-            onPress={() => {
-              household.write((store) => deleteItem({ store, itemId: item.id }));
-              goBack();
-            }}
-            style={styles.trash}
-          >
-            <Icon name="trash-2" size={20} color={colors.ink2} />
-          </Tap>
-        </View>
+        <NavBar
+          back={{ label: monthName(item.listId) }}
+          right={
+            <Tap
+              accessibilityRole="button"
+              accessibilityLabel="Delete item"
+              feedback="medium"
+              onPress={() => {
+                household.write((store) => deleteItem({ store, itemId: item.id }));
+                goBack();
+              }}
+              style={styles.trash}
+            >
+              <Icon name="trash-2" size={20} color={colors.ink2} />
+            </Tap>
+          }
+        />
 
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <NameField value={draft.name} onChangeText={(text) => patchDraft({ name: text })} returnKeyType="done" />
@@ -137,10 +135,7 @@ export default function ItemDetail() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   missing: { alignItems: "center", justifyContent: "center", gap: 16 },
-  nav: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12, paddingVertical: 4 },
-  back: { height: 44, flexDirection: "row", alignItems: "center", gap: 2, paddingRight: 12 },
-  backLabel: { fontSize: 15 },
-  trash: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  trash: { width: 44, height: 44, alignItems: "center", justifyContent: "center", marginRight: -10 },
   content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24, gap: 22 },
   addedBy: { flexDirection: "row", alignItems: "center", gap: 12 },
   footer: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },

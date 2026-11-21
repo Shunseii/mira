@@ -18,6 +18,8 @@ export type HouseholdState = {
   pending: string[];
   /** At least one full sync with the server has completed on this device. */
   hasSynced: boolean;
+  /** When a sync last sent changes made on this device (for a brief "Synced"). */
+  sentAt?: number;
 };
 
 export type Household = {
@@ -26,12 +28,15 @@ export type Household = {
   /** Every local change goes through here so offline edits can be tracked. */
   write: (change: (store: MergeableStore) => void) => void;
   /** Reconnect now if not online (pull-to-refresh, foreground, network back). */
-  nudge: () => void;
+  /** Try to connect now; resolves once it is online or has given up for now. */
+  nudge: () => Promise<void>;
   stop: () => Promise<void>;
 };
 
 const BACKOFF_MS = [1000, 2000, 5000, 10_000, 30_000];
 const OPEN_TIMEOUT_MS = 8000;
+/** How long after the last offline change the waiting-to-sync list is saved to the device. */
+const PENDING_PERSIST_MS = 500;
 
 const openSocket = ({ url, password }: { url: string; password: string }): Promise<WebSocket> =>
   new Promise((resolve, reject) => {
@@ -85,9 +90,15 @@ export const startHousehold = async ({
     hasSynced: deviceStorage.get(syncedKey) === "1",
   });
   const patch = (next: Partial<HouseholdState>) => state.set((previous) => ({ ...previous, ...next }));
+  // Saved a moment later and coalesced: a Keychain/Keystore write on every offline tap would hold up the tap itself.
+  let persistTimer: ReturnType<typeof setTimeout> | undefined;
   const setPending = (pending: string[]) => {
-    deviceStorage.set(pendingKey, JSON.stringify(pending));
     patch({ pending });
+    if (persistTimer) clearTimeout(persistTimer);
+    persistTimer = setTimeout(() => {
+      persistTimer = undefined;
+      deviceStorage.set(pendingKey, JSON.stringify(state.get().pending));
+    }, PENDING_PERSIST_MS);
   };
 
   let localWriteDepth = 0;
@@ -97,7 +108,9 @@ export const startHousehold = async ({
     const touched = Object.entries(changedTables).flatMap(([tableId, rows]) =>
       Object.keys(rows ?? {}).map((rowId) => `${tableId}/${rowId}`),
     );
-    if (touched.length > 0) setPending([...new Set([...state.get().pending, ...touched])]);
+    const known = new Set(state.get().pending);
+    const added = touched.filter((key) => !known.has(key));
+    if (added.length > 0) setPending([...known, ...added]);
   });
 
   const write: Household["write"] = (change) => {
@@ -146,7 +159,17 @@ export const startHousehold = async ({
     await old?.destroy().catch(() => undefined);
   };
 
-  const connect = async (): Promise<void> => {
+  let inFlight: Promise<void> | undefined;
+  /** One attempt at a time; callers during an attempt wait for that one. */
+  const connect = (): Promise<void> => {
+    if (stopped || synchronizer) return Promise.resolve();
+    inFlight ??= attemptConnection().finally(() => {
+      inFlight = undefined;
+    });
+    return inFlight;
+  };
+
+  const attemptConnection = async (): Promise<void> => {
     if (stopped || connecting || synchronizer) return;
     connecting = true;
     try {
@@ -168,7 +191,8 @@ export const startHousehold = async ({
       await created.startSync();
       attempt = 0;
       deviceStorage.set(syncedKey, "1");
-      patch({ status: "online", hasSynced: true });
+      const sent = state.get().pending.length > 0;
+      patch({ status: "online", hasSynced: true, ...(sent ? { sentAt: Date.now() } : {}) });
       setPending([]);
       housekeeping();
     } catch {
@@ -184,12 +208,25 @@ export const startHousehold = async ({
     }
   };
 
-  const nudge = () => {
-    if (stopped || synchronizer || connecting || state.get().status === "unauthorized") return;
-    if (reconnectTimer) clearTimeout(reconnectTimer);
-    reconnectTimer = undefined;
-    attempt = 0;
-    void connect();
+  /** A first miss stays "connecting" while a quick retry runs; this waits for the outcome. */
+  const settled = (): Promise<void> =>
+    new Promise((resolve) => {
+      if (state.get().status !== "connecting") return resolve();
+      const unsubscribe = state.subscribe(() => {
+        if (state.get().status === "connecting") return;
+        unsubscribe();
+        resolve();
+      });
+    });
+
+  const nudge = (): Promise<void> => {
+    if (stopped || synchronizer || state.get().status === "unauthorized") return Promise.resolve();
+    if (!inFlight) {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectTimer = undefined;
+      attempt = 0;
+    }
+    return connect().then(settled);
   };
 
   persister = await startLocalPersistence({ store, dbName });
@@ -200,10 +237,10 @@ export const startHousehold = async ({
   const appState: NativeEventSubscription = AppState.addEventListener("change", (next) => {
     if (next !== "active") return;
     housekeeping();
-    nudge();
+    void nudge();
   });
   const network = addNetworkStateListener((network) => {
-    if (network.isConnected) nudge();
+    if (network.isConnected) void nudge();
   });
 
   return {
@@ -214,6 +251,10 @@ export const startHousehold = async ({
     stop: async () => {
       stopped = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (persistTimer) {
+        clearTimeout(persistTimer);
+        deviceStorage.set(pendingKey, JSON.stringify(state.get().pending));
+      }
       appState.remove();
       network.remove();
       const openSocketRef = socket;

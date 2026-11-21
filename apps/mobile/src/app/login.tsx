@@ -8,7 +8,7 @@ import { Button } from "@/components/Button";
 import { Field } from "@/components/Field";
 import { Icon } from "@/components/Icon";
 import { Screen } from "@/components/Screen";
-import { Tap, haptic } from "@/components/Tap";
+import { Tap, haptic, PRESS_DELAY_MS } from "@/components/Tap";
 import { Text } from "@/components/Text";
 import { Wordmark } from "@/components/Wordmark";
 import { useHouseholdState, useOptionalHousehold, useStoreQuery } from "@/data/HouseholdProvider";
@@ -92,7 +92,7 @@ const ServerStep = () => {
         error={error}
       />
       <View style={styles.spacer} />
-      <Button label="Connect" onPress={connect} busy={busy} />
+      <Button pressDelay={PRESS_DELAY_MS} label="Connect" onPress={connect} busy={busy} />
     </StepFrame>
   );
 };
@@ -138,7 +138,7 @@ const PasswordStep = ({ serverUrl }: { serverUrl: string }) => {
         <Text variant="secondary" style={styles.flex} numberOfLines={1}>
           {displayHost(serverUrl)}
         </Text>
-        <Tap accessibilityRole="button" onPress={() => updateSession({ serverUrl: null })} style={styles.changeButton}>
+        <Tap unstable_pressDelay={PRESS_DELAY_MS} accessibilityRole="button" onPress={() => updateSession({ serverUrl: null })} style={styles.changeButton}>
           <Text variant="label" color="accent">
             Change
           </Text>
@@ -164,7 +164,7 @@ const PasswordStep = ({ serverUrl }: { serverUrl: string }) => {
         error={error}
       />
       <View style={styles.spacer} />
-      <Button label="Unlock" onPress={unlock} busy={busy} />
+      <Button pressDelay={PRESS_DELAY_MS} label="Unlock" onPress={unlock} busy={busy} />
     </StepFrame>
   );
 };
@@ -184,6 +184,7 @@ const UserList = () => {
       {users.map((user, index) => (
         <Animated.View key={user.id} entering={FadeIn.delay(index * 40)}>
           <Tap
+            unstable_pressDelay={PRESS_DELAY_MS}
             accessibilityRole="button"
             accessibilityLabel={`I'm ${user.name}`}
             feedback="select"
@@ -261,7 +262,7 @@ const WhoStep = () => {
               autoCapitalize="words"
             />
           </View>
-          <Button label="Create" kind="dark" compact onPress={create} disabled={!household || !name.trim()} style={styles.createButton} />
+          <Button pressDelay={PRESS_DELAY_MS} label="Create" kind="dark" compact onPress={create} disabled={!household || !name.trim()} style={styles.createButton} />
         </View>
       </ScrollView>
     </Animated.View>

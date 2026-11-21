@@ -9,6 +9,7 @@ import {
   restoreItems,
   setChecked,
   setCheckedMany,
+  TABLES,
   type Group,
   type Item,
   type MonthKey,
@@ -17,7 +18,15 @@ import {
 import { router, useFocusEffect } from "expo-router";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BackHandler, RefreshControl, StyleSheet, TextInput, View } from "react-native";
-import Animated, { FadeIn } from "react-native-reanimated";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  LayoutAnimationConfig,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import {
   NestedReorderableList,
   ScrollViewContainer,
@@ -40,23 +49,71 @@ import type { SheetRef } from "@/components/Sheet";
 import { Screen } from "@/components/Screen";
 import { SwipeToDelete } from "@/components/SwipeToDelete";
 import { UNDO_MS, UndoSnackbar } from "@/components/UndoSnackbar";
-import { HOLD_MS, Tap, haptic } from "@/components/Tap";
+import { HOLD_MS, Tap, haptic, PRESS_DELAY_MS } from "@/components/Tap";
 import { Text } from "@/components/Text";
 import { useCurrentMonth, useHousehold, useHouseholdState, useStoreQuery } from "@/data/HouseholdProvider";
 import { setPrefs, usePref, type ListView } from "@/data/prefs";
 import { updateSession, useSession } from "@/data/session";
 import { setExpandOrigin, useOriginHidden } from "@/lib/expandOrigin";
-import { ROW_LAYOUT } from "@/theme/motion";
+import { createStabilizer } from "@/lib/stableRows";
+import { ROW_LAYOUT, SPRING_SNAPPY } from "@/theme/motion";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS, SEPARATOR_HEIGHT } from "@/theme/tokens";
 
-/** Rows glide to their new place; no fades or bounce, so adding and editing stay calm. */
-/** Right-edge strip (px) where a touch belongs to the grip in reorder mode. */
 /** Just after a row's hold fires (HOLD_MS), so the row is picked up before the pan takes the touch. */
 const PAN_AFTER_HOLD_MS = HOLD_MS + 50;
 const FAB_SIZE = 64;
 const SEARCH_HEIGHT = 44;
 const SEARCH_RADIUS = 14;
+
+/** Rows that arrive (added, synced in, restored, the Checked section opening) fade in; rows that leave fade out. */
+const ROW_ENTER = FadeIn.duration(180);
+const ROW_EXIT = FadeOut.duration(120);
+/** How far a new month's list slides in from the side it came from. */
+const MONTH_SHIFT = 24;
+const MONTH_FADE_MS = 180;
+const MIN_SYNC_FEEDBACK_MS = 600;
+
+const monthEntering = (direction: 1 | -1) => () => {
+  "worklet";
+  return {
+    initialValues: { opacity: 0, transform: [{ translateX: MONTH_SHIFT * direction }] },
+    animations: {
+      opacity: withTiming(1, { duration: MONTH_FADE_MS }),
+      transform: [{ translateX: withSpring(0, SPRING_SNAPPY) }],
+    },
+  };
+};
+
+/** What the Undo bar would put back. Checks tapped in a row gather into one offer. */
+type UndoOffer =
+  | { kind: "delete"; itemIds: string[]; message: string }
+  | { kind: "check"; items: { id: string; name: string }[] }
+  | { kind: "checkAll"; itemIds: string[]; checked: boolean; title: string };
+
+const undoMessage = (offer: UndoOffer): string => {
+  if (offer.kind === "delete") return offer.message;
+  if (offer.kind === "check") {
+    const [only] = offer.items;
+    return offer.items.length === 1 && only ? `Checked ${only.name}` : `Checked ${offer.items.length} items`;
+  }
+  const count = offer.itemIds.length === 1 ? "1 item" : `${offer.itemIds.length} items`;
+  return `${offer.checked ? "Checked" : "Unchecked"} ${count} in ${offer.title}`;
+};
+
+const CheckedChevron = ({ open }: { open: boolean }) => {
+  const { colors } = useTheme();
+  const turn = useSharedValue(open ? 90 : 0);
+  useEffect(() => {
+    turn.set(withSpring(open ? 90 : 0, SPRING_SNAPPY));
+  }, [open, turn]);
+  const style = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.value}deg` }] }));
+  return (
+    <Animated.View style={style}>
+      <Icon name="chevron-right" size={18} color={colors.ink3} />
+    </Animated.View>
+  );
+};
 
 type HeaderRow = {
   kind: "header";
@@ -185,12 +242,12 @@ const SearchBar = ({ month, value, onChange, onView }: { month: MonthKey; value:
           style={[styles.searchInput, { color: colors.ink }]}
         />
         {value ? (
-          <Tap accessibilityLabel="Clear search" onPress={() => onChange("")} style={styles.clear}>
+          <Tap unstable_pressDelay={PRESS_DELAY_MS} accessibilityLabel="Clear search" onPress={() => onChange("")} style={styles.clear}>
             <Icon name="x" size={18} color={colors.ink2} />
           </Tap>
         ) : null}
       </View>
-      <Tap accessibilityRole="button" accessibilityLabel="Arrange list" pressScale={0.92} onPress={onView} style={styles.viewButton}>
+      <Tap unstable_pressDelay={PRESS_DELAY_MS} accessibilityRole="button" accessibilityLabel="Arrange list" pressScale={0.92} onPress={onView} style={styles.viewButton}>
         <SquircleFill size={{ width: SEARCH_HEIGHT, height: SEARCH_HEIGHT }} radius={SEARCH_RADIUS} color={colors.surface2} />
         <Icon name="list-ordered" size={20} color={colors.ink2} />
       </Tap>
@@ -232,6 +289,7 @@ const SectionHeader = ({
     return (
       <View style={styles.headerInset}>
         <Tap
+          unstable_pressDelay={PRESS_DELAY_MS}
           accessibilityRole="button"
           accessibilityState={{ expanded: !collapsed }}
           accessibilityLabel={`Checked items, ${row.remaining}`}
@@ -244,13 +302,11 @@ const SectionHeader = ({
           <Text variant="eyebrow" color="ink2">
             {row.title}
           </Text>
-          <Text variant="tag" color="ink3">
+          <Text variant="tag" color="ink2">
             {row.remaining}
           </Text>
           <View style={styles.flex} />
-          <View style={collapsed ? null : styles.chevronOpen}>
-            <Icon name="chevron-right" size={18} color={colors.ink3} />
-          </View>
+          <CheckedChevron open={!collapsed} />
         </Tap>
       </View>
     );
@@ -263,7 +319,7 @@ const SectionHeader = ({
           <Text variant="eyebrow" color="ink2">
             {row.title}
           </Text>
-          <Text variant="tag" color="ink3">
+          <Text variant="tag" color="ink2">
             {row.remaining}
           </Text>
         </View>
@@ -278,13 +334,14 @@ const SectionHeader = ({
         {done ? (
           <Icon name="check" size={14} color={colors.ink3} />
         ) : (
-          <Text variant="tag" color="ink3">
+          <Text variant="tag" color="ink2">
             {row.remaining}
           </Text>
         )}
         <View style={styles.flex} />
         {onCheckAll ? (
           <Tap
+            unstable_pressDelay={PRESS_DELAY_MS}
             accessibilityRole="button"
             accessibilityLabel={done ? `Uncheck everything in ${row.title}` : `Check off everything in ${row.title}`}
             feedback="select"
@@ -314,6 +371,7 @@ const ReorderHint = ({ listView, onDone }: { listView: ListView; onDone: () => v
         {listView === "priority" ? "Hold and drag items into the order you shop." : "Hold and drag items, within or between groups."}
       </Text>
       <Tap
+        unstable_pressDelay={PRESS_DELAY_MS}
         accessibilityRole="button"
         accessibilityLabel="Done reordering"
         feedback="select"
@@ -393,9 +451,10 @@ export default function ListScreen() {
   const { pending, status } = useHouseholdState();
   const { userId } = useSession();
   const current = useCurrentMonth();
-  const [month, setMonth] = useState<MonthKey>(current);
+  const [place, setPlace] = useState<{ month: MonthKey; direction: 1 | -1 }>({ month: current, direction: 1 });
+  const { month } = place;
   const [search, setSearch] = useState("");
-  const [undo, setUndo] = useState<{ itemIds: string[]; message: string }>();
+  const [undo, setUndo] = useState<UndoOffer>();
   const [reorderMode, setReorderMode] = useState(false);
   const monthSheet = useRef<SheetRef>(null);
   const viewSheet = useRef<SheetRef>(null);
@@ -412,7 +471,18 @@ export default function ListScreen() {
   const groupsById = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups]);
   const toggleChecked = useCallback(() => setPrefs({ checkedCollapsed: !checkedCollapsed }), [checkedCollapsed]);
   const months = useStoreQuery((store) => browsableMonths({ store, current }), [current]);
-  const rows = useMemo(() => buildRows({ view, listView, groupsById, checkedCollapsed }), [checkedCollapsed, groupsById, listView, view]);
+  // Hand memoized rows the same objects when nothing about them changed, so one check re-renders one row.
+  const [stableItem] = useState(createStabilizer<Item>);
+  const [stableGroup] = useState(createStabilizer<Group>);
+  const rows = useMemo(
+    () =>
+      buildRows({ view, listView, groupsById, checkedCollapsed }).map((row) =>
+        row.kind === "item"
+          ? { ...row, item: stableItem(row.item.id, row.item), group: row.group && stableGroup(row.group.id, row.group) }
+          : row,
+      ),
+    [checkedCollapsed, groupsById, listView, stableGroup, stableItem, view],
+  );
   const pendingSet = useMemo(() => new Set(pending), [pending]);
 
   const index = months.indexOf(month);
@@ -437,8 +507,21 @@ export default function ListScreen() {
     return () => clearTimeout(timer);
   }, [undo]);
 
+  // Pull to refresh and the sync pill: the spinner stays long enough to register, then shows how it went.
+  const [syncing, setSyncing] = useState<"pull" | "pill">();
+  const syncNow = useCallback(
+    async (from: "pull" | "pill") => {
+      setSyncing(from);
+      await Promise.all([household.nudge(), new Promise((resolve) => setTimeout(resolve, MIN_SYNC_FEEDBACK_MS))]);
+      setSyncing(undefined);
+    },
+    [household],
+  );
+
   const goToMonth = useCallback((target: MonthKey) => {
-    setMonth(target);
+    setPlace((previous) =>
+      previous.month === target ? previous : { month: target, direction: target > previous.month ? 1 : -1 },
+    );
     setSearch("");
     setReorderMode(false);
   }, []);
@@ -457,7 +540,18 @@ export default function ListScreen() {
     () => ({
       onPress: (item) => {
         if (!userId) return;
-        household.write((store) => setChecked({ store, itemId: item.id, userId, checked: item.checkedAt === undefined }));
+        const checking = item.checkedAt === undefined;
+        household.write((store) => setChecked({ store, itemId: item.id, userId, checked: checking }));
+        setUndo((offer) => {
+          if (checking) {
+            const items = offer?.kind === "check" ? offer.items.filter((other) => other.id !== item.id) : [];
+            return { kind: "check", items: [...items, { id: item.id, name: item.name }] };
+          }
+          // Unchecking by hand takes that item out of a pending "Checked …" offer.
+          if (offer?.kind !== "check") return offer;
+          const items = offer.items.filter((other) => other.id !== item.id);
+          return items.length === 0 ? undefined : { kind: "check", items };
+        });
       },
       onHold: () => {
         // Clearing an active search reshuffles the rows, so only pick the row up when none was showing.
@@ -467,7 +561,7 @@ export default function ListScreen() {
       },
       onDelete: (item) => {
         household.write((store) => deleteItems({ store, itemIds: [item.id] }));
-        setUndo({ itemIds: [item.id], message: `Deleted ${item.name}` });
+        setUndo({ kind: "delete", itemIds: [item.id], message: `Deleted ${item.name}` });
       },
       onEdit: (item) => router.push({ pathname: "/item/[id]", params: { id: item.id } }),
     }),
@@ -477,8 +571,13 @@ export default function ListScreen() {
   const checkAll = useCallback(
     (row: HeaderRow) => {
       if (!userId) return;
-      household.write((store) => setCheckedMany({ store, itemIds: row.itemIds, userId, checked: row.remaining > 0 }));
-      haptic(row.remaining > 0 ? "success" : "light");
+      const checked = row.remaining > 0;
+      const { store } = household;
+      const changing = row.itemIds.filter((id) => (store.getCell(TABLES.items, id, "checked_at") !== undefined) !== checked);
+      if (changing.length === 0) return;
+      household.write((store) => setCheckedMany({ store, itemIds: changing, userId, checked }));
+      haptic(checked ? "success" : "light");
+      setUndo({ kind: "checkAll", itemIds: changing, checked, title: row.title });
     },
     [household, userId],
   );
@@ -495,11 +594,17 @@ export default function ListScreen() {
     });
   };
 
-  const undoDelete = () => {
+  const undoLast = () => {
     if (!undo) return;
-    const { itemIds } = undo;
-    household.write((store) => restoreItems({ store, itemIds }));
     setUndo(undefined);
+    if (undo.kind === "delete") {
+      household.write((store) => restoreItems({ store, itemIds: undo.itemIds }));
+      return;
+    }
+    if (!userId) return;
+    const itemIds = undo.kind === "check" ? undo.items.map((item) => item.id) : undo.itemIds;
+    const checked = undo.kind === "checkAll" ? !undo.checked : false;
+    household.write((store) => setCheckedMany({ store, itemIds, userId, checked }));
   };
 
   const onReorder = useCallback(
@@ -522,16 +627,20 @@ export default function ListScreen() {
   const renderRow = useCallback(
     ({ item: row }: { item: Row }) =>
       row.kind === "header" ? (
-        <SectionHeader row={row} onCheckAll={reorderMode ? undefined : checkAll} onToggleChecked={toggleChecked} />
+        <Animated.View entering={ROW_ENTER} exiting={ROW_EXIT}>
+          <SectionHeader row={row} onCheckAll={reorderMode ? undefined : checkAll} onToggleChecked={toggleChecked} />
+        </Animated.View>
       ) : (
-        <DraggableItem
-          item={row.item}
-          group={row.group}
-          month={month}
-          pending={pendingSet.has(`items/${row.item.id}`)}
-          handlers={handlers}
-          reorderMode={reorderMode}
-        />
+        <Animated.View entering={ROW_ENTER} exiting={ROW_EXIT}>
+          <DraggableItem
+            item={row.item}
+            group={row.group}
+            month={month}
+            pending={pendingSet.has(`items/${row.item.id}`)}
+            handlers={handlers}
+            reorderMode={reorderMode}
+          />
+        </Animated.View>
       ),
     [checkAll, handlers, month, pendingSet, reorderMode, toggleChecked],
   );
@@ -542,70 +651,89 @@ export default function ListScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: 120 + insets.bottom }]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
-        refreshControl={<RefreshControl enabled={!reorderMode} refreshing={false} onRefresh={household.nudge} tintColor={colors.accent} />}
+        refreshControl={
+          <RefreshControl
+            enabled={!reorderMode}
+            refreshing={syncing === "pull"}
+            onRefresh={() => void syncNow("pull")}
+            tintColor={colors.accent}
+            colors={[colors.accent]}
+            progressBackgroundColor={colors.surface}
+          />
+        }
       >
         <ListTopBar
-          onSettings={() => router.push("/settings")}
-          onSyncPill={() => (status === "unauthorized" ? updateSession({ password: null }) : household.nudge())}
+          onSettings={() => router.push({ pathname: "/settings", params: { month } })}
+          syncing={syncing !== undefined}
+          onSyncPill={() => (status === "unauthorized" ? updateSession({ password: null }) : void syncNow("pill"))}
           onUpdatePill={() => updateSheet.current?.present()}
         />
-        <MonthTitle
-          month={month}
-          canGoBack={previous !== undefined}
-          canGoForward={next !== undefined}
-          onStep={(direction) => {
-            const target = direction === 1 ? next : previous;
-            if (target) goToMonth(target);
-          }}
-          onOpenPicker={() => monthSheet.current?.present()}
-        />
+        <LayoutAnimationConfig skipEntering>
+          <Animated.View key={month} entering={monthEntering(place.direction)}>
+            <MonthTitle
+              month={month}
+              canGoBack={previous !== undefined}
+              canGoForward={next !== undefined}
+              onStep={(direction) => {
+                const target = direction === 1 ? next : previous;
+                if (target) goToMonth(target);
+              }}
+              onOpenPicker={() => monthSheet.current?.present()}
+            />
+          </Animated.View>
+        </LayoutAnimationConfig>
         {reorderMode ? (
           <ReorderHint listView={listView} onDone={() => setReorderMode(false)} />
         ) : view.totalCount > 0 ? (
           <SearchBar month={month} value={search} onChange={setSearch} onView={() => viewSheet.current?.present()} />
         ) : null}
 
-        <View style={styles.rows}>
-          {rows.length === 0 ? <EmptyState searching={search.trim() !== ""} /> : null}
-          <NestedReorderableList
-            data={rows}
-            // Lists are short: render every row in the first pass instead of
-            // FlatList's default batches, so a month appears complete at once.
-            initialNumToRender={Math.max(rows.length, 20)}
-            maxToRenderPerBatch={100}
-            windowSize={41}
-            keyExtractor={(row) => row.key}
-            renderItem={renderRow}
-            onReorder={onReorder}
-            onDragStart={() => {
-              "worklet";
-              scheduleOnRN(haptic, "medium");
-            }}
-            onDragEnd={() => {
-              "worklet";
-              scheduleOnRN(haptic, "light");
-            }}
-            shouldUpdateActiveItem
-            // The same in and out of reorder mode, so entering it mid-hold doesn't cancel the drag.
-            // The pan only takes over once a row has been held, so a plain swipe always scrolls.
-            dragEnabled
-            panEnabled
-            panActivateAfterLongPress={PAN_AFTER_HOLD_MS}
-            itemLayoutAnimation={ROW_LAYOUT}
-            scrollEnabled={false}
-            renderDropIndicator={() => (
-              <View style={styles.dropIndicatorInset}>
-                <View style={[styles.dropIndicator, { backgroundColor: colors.accent }]} />
-              </View>
-            )}
-          />
-        </View>
+        <LayoutAnimationConfig skipEntering>
+          <Animated.View key={month} entering={monthEntering(place.direction)} style={styles.rows}>
+            {/* A month's rows arrive with the month, not one by one. */}
+            <LayoutAnimationConfig skipEntering skipExiting>
+              {rows.length === 0 ? <EmptyState searching={search.trim() !== ""} /> : null}
+              <NestedReorderableList
+                data={rows}
+                // Lists are short: render every row in the first pass instead of
+                // FlatList's default batches, so a month appears complete at once.
+                initialNumToRender={Math.max(rows.length, 20)}
+                maxToRenderPerBatch={100}
+                windowSize={41}
+                keyExtractor={(row) => row.key}
+                renderItem={renderRow}
+                onReorder={onReorder}
+                onDragStart={() => {
+                  "worklet";
+                  scheduleOnRN(haptic, "medium");
+                }}
+                onDragEnd={() => {
+                  "worklet";
+                  scheduleOnRN(haptic, "light");
+                }}
+                shouldUpdateActiveItem
+                // The same in and out of reorder mode, so entering it mid-hold doesn't cancel the drag.
+                // The pan only takes over once a row has been held, so a plain swipe always scrolls.
+                dragEnabled
+                panEnabled
+                panActivateAfterLongPress={PAN_AFTER_HOLD_MS}
+                itemLayoutAnimation={ROW_LAYOUT}
+                scrollEnabled={false}
+                renderDropIndicator={() => (
+                  <View style={styles.dropIndicatorInset}>
+                    <View style={[styles.dropIndicator, { backgroundColor: colors.accent }]} />
+                  </View>
+                )}
+              />
+            </LayoutAnimationConfig>
+          </Animated.View>
+        </LayoutAnimationConfig>
       </ScrollViewContainer>
 
       {undo ? (
         <UndoSnackbar
-          message={undo.message}
-          onUndo={undoDelete}
+          message={undoMessage(undo)}
+          onUndo={undoLast}
           onDismiss={() => setUndo(undefined)}
           bottom={Math.max(insets.bottom, 16) + (reorderMode ? 16 : 96)}
         />
@@ -659,7 +787,6 @@ export default function ListScreen() {
 }
 
 const styles = StyleSheet.create({
-  chevronOpen: { transform: [{ rotate: "90deg" }] },
   hidden: { opacity: 0 },
   flex: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 8 },

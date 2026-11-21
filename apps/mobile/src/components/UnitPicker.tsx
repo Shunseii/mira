@@ -3,38 +3,52 @@ import { customUnits, UNIT_GROUPS } from "@mira/shared";
 import { forwardRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useStoreQuery } from "@/data/HouseholdProvider";
+import { useSheetPick } from "@/lib/useSheetPick";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS } from "@/theme/tokens";
 import { Icon, type IconName } from "./Icon";
 import { Sheet, type SheetRef } from "./Sheet";
-import { Tap } from "./Tap";
+import { Tap, PRESS_DELAY_MS } from "./Tap";
 import { Text } from "./Text";
 import { SquircleFill } from "./Squircle";
+
+const CHECK_SIZE = 16;
+const CHECK_GAP = 6;
+const CHIP_LARGE_PADDING = 14;
 
 const UnitChip = ({ unit, selected, size, onPress }: { unit: string; selected: boolean; size: "small" | "large"; onPress: () => void }) => {
   const { colors } = useTheme();
   const large = size === "large";
+  const fontSize = large ? 16 : 14;
   return (
     <Tap
+      unstable_pressDelay={PRESS_DELAY_MS}
       accessibilityRole="radio"
       accessibilityState={{ selected }}
       accessibilityLabel={`Unit ${unit}`}
       feedback="select"
       pressScale={0.92}
       onPress={onPress}
+      // Same width picked or not, so the chips around it don't shift: the border is always there (clear when
+      // unpicked), the label's width is the bold one's, and a large chip's padding makes room for its check.
       style={[
-        large ? styles.chipLarge : styles.chipSmall,
-        selected ? { backgroundColor: colors.accentSoft, borderColor: colors.accent, borderWidth: 1 } : { backgroundColor: colors.surface2 },
+        large ? (selected ? styles.chipLarge : styles.chipLargeRoomy) : styles.chipSmall,
+        { backgroundColor: selected ? colors.accentSoft : colors.surface2, borderColor: selected ? colors.accent : "transparent" },
       ]}
     >
-      {selected && large ? <Icon name="check" size={16} color={colors.accent} /> : null}
-      <Text
-        variant="secondary"
-        color={selected ? "accent" : "ink"}
-        style={{ fontFamily: selected ? FONTS.bodyBold : FONTS.bodyMedium, fontSize: large ? 16 : 14 }}
-      >
-        {unit}
-      </Text>
+      {selected && large ? <Icon name="check" size={CHECK_SIZE} color={colors.accent} /> : null}
+      <View>
+        <Text variant="secondary" style={[{ fontFamily: FONTS.bodyBold, fontSize }, styles.ghost]}>
+          {unit}
+        </Text>
+        <Text
+          variant="secondary"
+          color={selected ? "accent" : "ink"}
+          style={[{ fontFamily: selected ? FONTS.bodyBold : FONTS.bodyMedium, fontSize }, styles.label]}
+        >
+          {unit}
+        </Text>
+      </View>
     </Tap>
   );
 };
@@ -58,7 +72,7 @@ export const UnitSuggestions = ({
       {shown.map((unit) => (
         <UnitChip key={unit} unit={unit} size="small" selected={unit === selected} onPress={() => onSelect(unit === selected ? undefined : unit)} />
       ))}
-      <Tap accessibilityRole="button" accessibilityLabel="More units" onPress={onMore} style={[styles.more, { borderColor: colors.line }]}>
+      <Tap unstable_pressDelay={PRESS_DELAY_MS} accessibilityRole="button" accessibilityLabel="More units" onPress={onMore} style={[styles.more, { borderColor: colors.line }]}>
         <Text variant="secondary" color="ink2" style={{ fontFamily: FONTS.bodyMedium, fontSize: 14 }}>
           More
         </Text>
@@ -78,7 +92,7 @@ const Section = ({ icon, title, hint, children }: { icon: IconName; title: strin
           {title}
         </Text>
         {hint ? (
-          <Text variant="tag" color="ink3">
+          <Text variant="tag" color="ink2">
             · {hint}
           </Text>
         ) : null}
@@ -95,21 +109,26 @@ export const UnitSheet = forwardRef<SheetRef, { selected: string | undefined; on
     const [custom, setCustom] = useState("");
     // Bumped to clear the custom field: it's uncontrolled (a controlled sheet input doubles text on Android).
     const [customKey, setCustomKey] = useState(0);
-    const choose = (unit: string | undefined) => {
-      onSelect(unit);
-      setCustom("");
-      setCustomKey((key) => key + 1);
-      if (ref && typeof ref === "object") ref.current?.dismiss();
-    };
+    const [shown, choose] = useSheetPick({
+      selected,
+      onSelect: (unit) => {
+        onSelect(unit);
+        setCustom("");
+        setCustomKey((key) => key + 1);
+      },
+      dismiss: () => {
+        if (ref && typeof ref === "object") ref.current?.dismiss();
+      },
+    });
     const chips = (units: readonly string[]) =>
-      units.map((unit) => <UnitChip key={unit} unit={unit} size="large" selected={unit === selected} onPress={() => choose(unit)} />);
+      units.map((unit) => <UnitChip key={unit} unit={unit} size="large" selected={unit === shown} onPress={() => choose(unit)} />);
 
     return (
       <Sheet
         ref={ref}
         title="Unit"
         action={
-          <Tap accessibilityRole="button" onPress={() => choose(undefined)} style={styles.clear}>
+          <Tap unstable_pressDelay={PRESS_DELAY_MS} accessibilityRole="button" onPress={() => choose(undefined)} style={styles.clear}>
             <Text variant="bodyStrong" color="accent" style={{ fontSize: 15 }}>
               No unit
             </Text>
@@ -150,7 +169,7 @@ export const UnitSheet = forwardRef<SheetRef, { selected: string | undefined; on
               onSubmitEditing={() => custom.trim() && choose(custom.trim())}
               style={[styles.customText, { color: colors.ink }]}
             />
-            <Tap accessibilityRole="button" disabled={!custom.trim()} onPress={() => choose(custom.trim())} style={styles.customAdd}>
+            <Tap unstable_pressDelay={PRESS_DELAY_MS} accessibilityRole="button" disabled={!custom.trim()} onPress={() => choose(custom.trim())} style={styles.customAdd}>
               <SquircleFill radius={10} color={custom.trim() ? colors.accent : colors.surface2} />
               <Text variant="bodyStrong" color={custom.trim() ? "onAccent" : "ink3"} style={{ fontSize: 15 }}>
                 Add
@@ -166,8 +185,26 @@ UnitSheet.displayName = "UnitSheet";
 
 const styles = StyleSheet.create({
   inline: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap", justifyContent: "flex-end", flexShrink: 1 },
-  chipSmall: { height: 32, borderRadius: 16, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", gap: 4 },
-  chipLarge: { height: 40, borderRadius: 20, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", gap: 6 },
+  chipSmall: { height: 32, borderRadius: 16, borderWidth: 1, paddingHorizontal: 12, flexDirection: "row", alignItems: "center" },
+  chipLarge: {
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingHorizontal: CHIP_LARGE_PADDING,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: CHECK_GAP,
+  },
+  chipLargeRoomy: {
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingHorizontal: CHIP_LARGE_PADDING + (CHECK_SIZE + CHECK_GAP) / 2,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  ghost: { opacity: 0 },
+  label: { position: "absolute", left: 0, right: 0, textAlign: "center" },
   more: { height: 32, borderRadius: 16, borderWidth: 1, paddingLeft: 11, paddingRight: 8, flexDirection: "row", alignItems: "center", gap: 3 },
   clear: { height: 44, justifyContent: "center" },
   sections: { gap: 22, paddingTop: 4, paddingBottom: 24 },

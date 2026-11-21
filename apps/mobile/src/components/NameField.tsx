@@ -3,7 +3,7 @@ import { StyleSheet, TextInput, type TextInputProps } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS } from "@/theme/tokens";
 import { SquircleFill } from "./Squircle";
-import { Tap } from "./Tap";
+import { Tap, PRESS_DELAY_MS } from "./Tap";
 import { Text } from "./Text";
 
 /**
@@ -24,7 +24,7 @@ export const NameField = ({
     else if (ref) ref.current = node;
   };
   return (
-    <Tap accessibilityRole="none" pressScale={1} onPress={() => own.current?.focus()} style={styles.card}>
+    <Tap unstable_pressDelay={PRESS_DELAY_MS} accessibilityRole="none" pressScale={1} onPress={() => own.current?.focus()} style={styles.card}>
       <SquircleFill radius={20} color={colors.accentSoft} />
       <Text variant="label" color="accent">
         Item name

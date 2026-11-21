@@ -1,15 +1,18 @@
-import { liveGroups, liveUsers, monthName, type NewItemPlacement } from "@mira/shared";
-import { router } from "expo-router";
+import { isMonthKey, liveGroups, liveUsers, monthName, type NewItemPlacement } from "@mira/shared";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import Animated, { ZoomIn } from "react-native-reanimated";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
+import { ConfirmSheet } from "@/components/ConfirmSheet";
 import { Icon, type IconName } from "@/components/Icon";
 import { GroupTile } from "@/components/GroupBadge";
 import { GroupLine } from "@/components/ItemRow";
+import { NavBar, NavTitle, useNavScroll } from "@/components/NavBar";
 import { Screen } from "@/components/Screen";
-import { Tap } from "@/components/Tap";
+import type { SheetRef } from "@/components/Sheet";
+import { Tap, PRESS_DELAY_MS } from "@/components/Tap";
 import { Text } from "@/components/Text";
 import { TOGGLE_SLIDE_MS, Toggle } from "@/components/Toggle";
 import { useCurrentMonth, useCurrentUser, useStoreQuery } from "@/data/HouseholdProvider";
@@ -17,7 +20,6 @@ import { useAppUpdate, type UpdateStatus } from "@/data/appUpdate";
 import { setPrefs, useInstantPref, usePref, usePrefs, type CheckedItems, type GroupLabel } from "@/data/prefs";
 import { displayHost } from "@/data/server";
 import { updateSession, useSession } from "@/data/session";
-import { goBack } from "@/lib/navigation";
 import { useAppearanceTransition } from "@/theme/AppearanceTransition";
 import { useTheme } from "@/theme/ThemeProvider";
 import { ACCENTS, buildPalette, FONTS, type AccentName, type ThemeMode } from "@/theme/tokens";
@@ -34,6 +36,7 @@ const GroupLabelTile = ({ value, label, selected, onSelect }: { value: GroupLabe
   const { colors } = useTheme();
   return (
     <Tap
+      unstable_pressDelay={PRESS_DELAY_MS}
       accessibilityRole="radio"
       accessibilityState={{ selected }}
       accessibilityLabel={`Group labels: ${label}`}
@@ -89,6 +92,7 @@ const ChoiceOption = ({
   const { colors } = useTheme();
   return (
     <Tap
+      unstable_pressDelay={PRESS_DELAY_MS}
       accessibilityRole="radio"
       accessibilityState={{ selected }}
       accessibilityLabel={label}
@@ -166,6 +170,7 @@ const ThemeTile = ({ mode, label }: { mode: ThemeMode; label: string }) => {
   );
   return (
     <Tap
+      unstable_pressDelay={PRESS_DELAY_MS}
       accessibilityRole="radio"
       accessibilityState={{ selected }}
       accessibilityLabel={`${label} theme`}
@@ -203,6 +208,7 @@ const Swatch = ({ name }: { name: AccentName }) => {
   const transition = useAppearanceTransition();
   return (
     <Tap
+      unstable_pressDelay={PRESS_DELAY_MS}
       accessibilityRole="radio"
       accessibilityState={{ selected }}
       accessibilityLabel={`${name} accent`}
@@ -259,7 +265,7 @@ const SettingsRow = ({
   );
   const rowStyle = [styles.householdRow, { borderBottomColor: colors.line }];
   return onPress ? (
-    <Tap accessibilityRole="button" pressScale={0.99} onPress={onPress} disabled={disabled} style={rowStyle}>
+    <Tap unstable_pressDelay={PRESS_DELAY_MS} accessibilityRole="button" pressScale={0.99} onPress={onPress} disabled={disabled} style={rowStyle}>
       {content}
     </Tap>
   ) : (
@@ -293,7 +299,7 @@ const UpdateCard = ({ restarting, onRestart }: { restarting: boolean; onRestart:
           </Text>
         </View>
       </View>
-      <Button label="Restart now" onPress={onRestart} busy={restarting} style={styles.updateButton} />
+      <Button pressDelay={PRESS_DELAY_MS} label="Restart now" onPress={onRestart} busy={restarting} style={styles.updateButton} />
     </View>
   );
 };
@@ -328,6 +334,12 @@ const AppSection = () => {
 export default function Settings() {
   const { colors } = useTheme();
   const current = useCurrentMonth();
+  // The month the list was showing, so Back names where it goes.
+  const params = useLocalSearchParams<{ month?: string }>();
+  const fromMonth = params.month && isMonthKey(params.month) ? params.month : current;
+  const { scrollY, onScroll } = useNavScroll();
+  const confirmSwitch = useRef<SheetRef>(null);
+  const confirmSignOut = useRef<SheetRef>(null);
   const user = useCurrentUser();
   const { serverUrl } = useSession();
   const prefs = usePrefs();
@@ -339,16 +351,9 @@ export default function Settings() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Tap accessibilityRole="button" onPress={() => goBack()} style={styles.back}>
-          <Icon name="chevron-left" size={20} color={colors.accent} />
-          <Text variant="bodyStrong" color="accent" style={styles.backLabel}>
-            {monthName(current)}
-          </Text>
-        </Tap>
-        <Text variant="heading" style={styles.title}>
-          Settings
-        </Text>
+      <NavBar back={{ label: monthName(fromMonth) }} title="Settings" scrollY={scrollY} />
+      <Animated.ScrollView onScroll={onScroll} scrollEventThrottle={16} contentContainerStyle={styles.content}>
+        <NavTitle>Settings</NavTitle>
 
         <View style={styles.userRow}>
           <Avatar name={user?.name ?? "?"} seed={user?.id ?? "?"} size={44} />
@@ -359,8 +364,9 @@ export default function Settings() {
             </Text>
           </View>
           <Tap
+            unstable_pressDelay={PRESS_DELAY_MS}
             accessibilityRole="button"
-            onPress={() => updateSession({ userId: null })}
+            onPress={() => confirmSwitch.current?.present()}
             style={[styles.switch, { backgroundColor: colors.surface2 }]}
           >
             <Text variant="label">Switch</Text>
@@ -449,9 +455,24 @@ export default function Settings() {
             value={`${groupCount} group${groupCount === 1 ? "" : "s"}`}
             onPress={() => router.push("/groups")}
           />
-          <SettingsRow icon="log-out" label="Sign out of this phone" tone="danger" onPress={() => updateSession({ password: null, userId: null })} />
+          <SettingsRow icon="log-out" label="Sign out of this phone" tone="danger" onPress={() => confirmSignOut.current?.present()} />
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
+      <ConfirmSheet
+        ref={confirmSwitch}
+        title="Switch person?"
+        message="You'll pick who's using Mira on this phone. The list stays as it is."
+        confirmLabel="Switch person"
+        onConfirm={() => updateSession({ userId: null })}
+      />
+      <ConfirmSheet
+        ref={confirmSignOut}
+        title="Sign out of this phone?"
+        message="You'll need the household password to sign back in."
+        confirmLabel="Sign out"
+        destructive
+        onConfirm={() => updateSession({ password: null, userId: null })}
+      />
     </Screen>
   );
 }
@@ -460,10 +481,7 @@ const TILE_RADIUS = 14;
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingBottom: 40, gap: 14 },
-  back: { height: 44, flexDirection: "row", alignItems: "center", gap: 2, marginLeft: -8, alignSelf: "flex-start", paddingRight: 12 },
-  backLabel: { fontSize: 15 },
-  title: { marginBottom: 6 },
+  content: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 40, gap: 14 },
   userRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 4 },
   switch: { height: 40, borderRadius: 20, paddingHorizontal: 16, justifyContent: "center" },
   section: { marginTop: 14, gap: 4 },

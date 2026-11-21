@@ -2,11 +2,12 @@ import { addableMonths, monthName, monthYear, type MonthKey, type MonthOption } 
 import { forwardRef } from "react";
 import { StyleSheet, View } from "react-native";
 import { useStoreQuery } from "@/data/HouseholdProvider";
+import { useSheetPick } from "@/lib/useSheetPick";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS } from "@/theme/tokens";
 import { Icon } from "./Icon";
 import { Sheet, type SheetRef } from "./Sheet";
-import { Tap } from "./Tap";
+import { Tap, PRESS_DELAY_MS } from "./Tap";
 import { Text } from "./Text";
 import { SquircleFill } from "./Squircle";
 
@@ -23,6 +24,13 @@ export const MonthSheet = forwardRef<
   const { colors } = useTheme();
   const options = useStoreQuery((store) => addableMonths({ store, current }), [current]);
   const kinds: MonthOption["kind"][] = ["next", "current", "earlier"];
+  const [shown, pick] = useSheetPick({
+    selected,
+    onSelect,
+    dismiss: () => {
+      if (ref && typeof ref === "object") ref.current?.dismiss();
+    },
+  });
   return (
     <Sheet ref={ref} title={title} subtitle={subtitle}>
       {kinds.map((kind) => {
@@ -34,29 +42,27 @@ export const MonthSheet = forwardRef<
               {SECTION_TITLES[kind]}
             </Text>
             {section.map((option) => {
-              const isSelected = option.month === selected;
+              const isSelected = option.month === shown;
               return (
                 <Tap
+                  unstable_pressDelay={PRESS_DELAY_MS}
                   key={option.month}
                   accessibilityRole="radio"
                   accessibilityState={{ selected: isSelected }}
                   feedback="select"
                   pressScale={0.98}
-                  onPress={() => {
-                    onSelect(option.month);
-                    if (ref && typeof ref === "object") ref.current?.dismiss();
-                  }}
+                  onPress={() => pick(option.month)}
                   style={[styles.row, isSelected ? null : { borderBottomColor: colors.line, borderBottomWidth: StyleSheet.hairlineWidth }]}
                 >
                   {isSelected ? <SquircleFill radius={12} color={colors.accentSoft} stroke={{ color: colors.accent, width: 1 }} /> : null}
                   <Text variant="body" color={isSelected ? "accent" : "ink"} style={isSelected ? styles.bold : null}>
                     {monthName(option.month)}{" "}
-                    <Text variant="body" color={isSelected ? "accent" : "ink3"}>
+                    <Text variant="body" color={isSelected ? "accent" : "ink2"}>
                       {monthYear(option.month)}
                     </Text>
                   </Text>
                   <View style={styles.right}>
-                    <Text variant="caption" color={isSelected ? "accent" : "ink3"}>
+                    <Text variant="caption" color={isSelected ? "accent" : "ink2"}>
                       {option.itemCount === 0 ? "Nothing yet" : `${option.itemCount} item${option.itemCount === 1 ? "" : "s"}`}
                     </Text>
                     {isSelected ? <Icon name="check" size={18} color={colors.accent} /> : null}

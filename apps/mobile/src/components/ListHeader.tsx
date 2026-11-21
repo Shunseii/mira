@@ -1,36 +1,121 @@
 import { monthName, monthYear, type MonthKey } from "@mira/shared";
+import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeOut,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 import { useAppUpdate } from "@/data/appUpdate";
 import { useHouseholdState } from "@/data/HouseholdProvider";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS } from "@/theme/tokens";
 import { Icon } from "./Icon";
-import { Tap } from "./Tap";
+import { Tap, PRESS_DELAY_MS } from "./Tap";
 import { Text } from "./Text";
 import { Wordmark } from "./Wordmark";
 import { UpdatePill } from "./UpdateReady";
 
-/** "Offline · 3 to sync", for when not connected. */
-const SyncPill = ({ onPress }: { onPress: () => void }) => {
+/** How long "Synced" stays up after a sync sends this phone's changes. */
+const SYNCED_MS = 2000;
+const SPIN_MS = 900;
+
+/** True until `ms` after `at`, then false (re-renders once when it runs out). */
+const useStillRecent = ({ at, ms }: { at: number | undefined; ms: number }): boolean => {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (at === undefined) return undefined;
+    const left = at + ms - Date.now();
+    if (left <= 0) return undefined;
+    const timer = setTimeout(() => setNow(Date.now()), left);
+    return () => clearTimeout(timer);
+  }, [at, ms]);
+  return at !== undefined && now < at + ms;
+};
+
+const Spinner = ({ color }: { color: string }) => {
+  const turn = useSharedValue(0);
+  useEffect(() => {
+    turn.set(withRepeat(withTiming(360, { duration: SPIN_MS, easing: Easing.linear }), -1, false));
+  }, [turn]);
+  const style = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.value}deg` }] }));
+  return (
+    <Animated.View style={style}>
+      <Icon name="refresh-cw" size={14} color={color} />
+    </Animated.View>
+  );
+};
+
+type SyncPillState = "unauthorized" | "offline" | "syncing" | "synced";
+
+/** What the header says about sync, if anything: a problem, a sync you asked for, or a brief "Synced". */
+const useSyncPillState = ({ syncing }: { syncing: boolean }): SyncPillState | undefined => {
+  const { status, pending, sentAt } = useHouseholdState();
+  const justSent = useStillRecent({ at: sentAt, ms: SYNCED_MS });
+  const [last, setLast] = useState<SyncPillState>();
+  const next = ((): SyncPillState | undefined => {
+    if (status === "unauthorized") return "unauthorized";
+    if (syncing && pending.length > 0) return "syncing";
+    if (status === "offline") return "offline";
+    if (status === "online" && justSent) return "synced";
+    // Reconnecting (on resume, or a quick retry): keep saying what it said, so the pill doesn't blink.
+    if (status === "connecting") return last === "synced" && !justSent ? undefined : last;
+    return undefined;
+  })();
+  if (next !== last) setLast(next);
+  return next;
+};
+
+const SyncPill = ({ state, onPress }: { state: SyncPillState; onPress: () => void }) => {
   const { colors } = useTheme();
-  const { status, pending } = useHouseholdState();
-  const unauthorized = status === "unauthorized";
+  const { pending } = useHouseholdState();
+  const synced = state === "synced";
+  const label = {
+    unauthorized: "Password changed",
+    offline: "Offline",
+    syncing: "Syncing",
+    synced: "Synced",
+  }[state];
+  const accessibilityLabel = {
+    unauthorized: "Signed out by the server. Tap to sign in again",
+    offline: `Offline, ${pending.length} changes waiting to sync. Tap to retry`,
+    syncing: `Syncing, ${pending.length} left`,
+    synced: "Synced",
+  }[state];
   return (
     <Animated.View entering={FadeIn} exiting={FadeOut}>
       <Tap
+        unstable_pressDelay={PRESS_DELAY_MS}
         accessibilityRole="button"
-        accessibilityLabel={
-          unauthorized ? "Signed out by the server. Tap to sign in again" : `Offline, ${pending.length} changes waiting to sync. Tap to retry`
-        }
+        accessibilityLabel={accessibilityLabel}
+        accessibilityLiveRegion="polite"
+        disabled={state === "syncing" || synced}
+        dimWhenDisabled={false}
         onPress={onPress}
-        style={[styles.pill, { backgroundColor: colors.surface2, borderColor: colors.line }]}
+        style={[
+          styles.pill,
+          synced ? { backgroundColor: colors.okSoft, borderColor: colors.okSoft } : { backgroundColor: colors.surface2, borderColor: colors.line },
+        ]}
       >
-        <Icon name="cloud-off" size={14} color={unauthorized ? colors.danger : colors.ink2} />
-        <Text variant="label">{unauthorized ? "Password changed" : "Offline"}</Text>
-        {!unauthorized && pending.length > 0 ? (
+        {state === "syncing" ? (
+          <Spinner color={colors.ink2} />
+        ) : (
+          <Icon
+            name={synced ? "check" : "cloud-off"}
+            size={14}
+            color={synced ? colors.ok : state === "unauthorized" ? colors.danger : colors.ink2}
+          />
+        )}
+        <Text variant="label" style={synced ? { color: colors.ok } : undefined}>
+          {label}
+        </Text>
+        {state === "syncing" ? (
           <Text variant="label" color="ink2" style={styles.pendingLabel}>
-            · {pending.length} to sync
+            · {pending.length} left
           </Text>
         ) : null}
       </Tap>
@@ -40,24 +125,26 @@ const SyncPill = ({ onPress }: { onPress: () => void }) => {
 
 /** Wordmark, sync status or a ready update (sync wins), and settings. Sits above the month title. */
 export const ListTopBar = ({
+  syncing,
   onSettings,
   onSyncPill,
   onUpdatePill,
 }: {
+  /** A sync the person asked for (pull to refresh, tapping the pill) is under way. */
+  syncing: boolean;
   onSettings: () => void;
   onSyncPill: () => void;
   onUpdatePill: () => void;
 }) => {
   const { colors } = useTheme();
-  const { status } = useHouseholdState();
   const { ready: updateReady } = useAppUpdate();
-  const syncProblem = status !== "online" && status !== "connecting";
+  const syncState = useSyncPillState({ syncing });
   return (
     <View style={styles.topRow}>
       <Wordmark />
       <View style={styles.topRight}>
-        {syncProblem ? <SyncPill onPress={onSyncPill} /> : updateReady ? <UpdatePill onPress={onUpdatePill} /> : null}
-        <Tap accessibilityRole="button" accessibilityLabel="Settings" onPress={onSettings} style={styles.settings}>
+        {syncState ? <SyncPill key={syncState} state={syncState} onPress={onSyncPill} /> : updateReady ? <UpdatePill onPress={onUpdatePill} /> : null}
+        <Tap unstable_pressDelay={PRESS_DELAY_MS} accessibilityRole="button" accessibilityLabel="Settings" onPress={onSettings} style={styles.settings}>
           <Icon name="settings-2" size={22} color={colors.ink2} />
         </Tap>
       </View>
@@ -85,6 +172,7 @@ export const MonthTitle = ({
   const { colors } = useTheme();
   return (
     <Tap
+      unstable_pressDelay={PRESS_DELAY_MS}
       accessibilityRole="adjustable"
       accessibilityLabel={`${monthName(month)} ${monthYear(month)}`}
       accessibilityHint="Double tap to pick a month"
@@ -101,7 +189,7 @@ export const MonthTitle = ({
       style={styles.monthTitle}
     >
       <Text variant="display">{monthName(month)}</Text>
-      <Text variant="display" color="ink3" style={styles.year}>
+      <Text variant="display" color="ink2" style={styles.year}>
         {monthYear(month)}
       </Text>
       <View style={styles.chevron}>

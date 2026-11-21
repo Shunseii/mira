@@ -21,7 +21,7 @@ import { FONTS, buildPalette, tint } from "@/theme/tokens";
 import { GroupChip, GroupFill } from "./GroupBadge";
 import { Icon } from "./Icon";
 import { Sheet, type SheetRef } from "./Sheet";
-import { Tap } from "./Tap";
+import { Tap, PRESS_DELAY_MS } from "./Tap";
 import { Text } from "./Text";
 import { SquircleFill } from "./Squircle";
 
@@ -57,6 +57,7 @@ const Swatch = ({
   const tone = groupTone({ hex: appearance.color, hex2: appearance.color2, scheme, pageBackground: colors.bg });
   return (
     <Tap
+      unstable_pressDelay={PRESS_DELAY_MS}
       accessibilityRole="radio"
       accessibilityState={{ selected }}
       accessibilityLabel={label}
@@ -112,6 +113,7 @@ export const ColorRow = memo(
           keyboardShouldPersistTaps="handled"
         >
           <Tap
+            unstable_pressDelay={PRESS_DELAY_MS}
             accessibilityRole="radio"
             accessibilityState={{ selected: !value.color }}
             accessibilityLabel="No color"
@@ -157,6 +159,7 @@ export const ColorRow = memo(
             <Swatch appearance={custom} label="Custom color, tap to edit" selected onPress={onCustom} onSelectedLayout={revealSelected} />
           ) : (
             <Tap
+              unstable_pressDelay={PRESS_DELAY_MS}
               accessibilityRole="button"
               accessibilityLabel="Custom color"
               feedback="select"
@@ -224,7 +227,7 @@ const GradientSlider = ({
         <Text variant="label" color="ink2">
           {label}
         </Text>
-        <Text variant="caption" color="ink3">
+        <Text variant="caption" color="ink2">
           {valueLabel}
         </Text>
       </View>
@@ -318,7 +321,7 @@ export const CustomColorSheet = forwardRef<
       title="Custom color"
       header={
         <View style={styles.sheetHeader}>
-          <Tap accessibilityRole="button" onPress={close} style={styles.headerButton}>
+          <Tap unstable_pressDelay={PRESS_DELAY_MS} accessibilityRole="button" onPress={close} style={styles.headerButton}>
             <Text variant="secondary" color="ink2">
               Cancel
             </Text>
@@ -327,6 +330,7 @@ export const CustomColorSheet = forwardRef<
             Custom color
           </Text>
           <Tap
+            unstable_pressDelay={PRESS_DELAY_MS}
             accessibilityRole="button"
             onPress={() => {
               onPick(color);
@@ -383,7 +387,7 @@ export const CustomColorSheet = forwardRef<
           value={intensity}
           onChange={(value) => fromSliders({ hue, intensity: value })}
         />
-        <Text variant="caption" color="ink3">
+        <Text variant="caption" color="ink2">
           You pick hue and intensity. Mira sets the lightness for light and dark mode so names stay readable.
         </Text>
       </View>

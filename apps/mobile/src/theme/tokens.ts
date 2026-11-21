@@ -11,6 +11,8 @@ export const ACCENTS = {
   ochre: "#C48716",
 } as const;
 
+const ON_OCHRE = "#221E19";
+
 export type AccentName = keyof typeof ACCENTS;
 
 export const isAccentName = (value: string | null | undefined): value is AccentName =>
@@ -28,6 +30,9 @@ export type Palette = {
   accentSoft: string;
   onAccent: string;
   danger: string;
+  /** Success marks (the "Synced" pill). */
+  ok: string;
+  okSoft: string;
   /** Large destructive fills (the swipe-to-delete panel): calmer than `danger` text in dark mode. */
   dangerFill: string;
   onDangerFill: string;
@@ -40,10 +45,12 @@ const LIGHT_BASE = {
   surface2: "#ECE5D7",
   ink: "#221E19",
   ink2: "#6B6358",
-  ink3: "#A39A8C",
+  ink3: "#8A8174",
   line: "#E2D9C9",
   onAccent: "#FFF8F1",
   danger: "#B4502B",
+  ok: "#3D7A45",
+  okSoft: "#DDEEDC",
   dangerFill: "#B4502B",
   onDangerFill: "#FFF8F1",
   scrim: "rgba(34,30,25,0.35)",
@@ -55,10 +62,12 @@ const DARK_BASE = {
   surface2: "#3A332B",
   ink: "#F2EBDD",
   ink2: "#B9AE9E",
-  ink3: "#7E7468",
+  ink3: "#908679",
   line: "#352E27",
   onAccent: "#FFF8F1",
   danger: "#E07A52",
+  ok: "#7FC28A",
+  okSoft: "#1E3322",
   dangerFill: "#6E3220",
   onDangerFill: "#F6DCCD",
   scrim: "rgba(0,0,0,0.55)",
@@ -90,6 +99,8 @@ export const buildPalette = ({ scheme, accent }: { scheme: "light" | "dark"; acc
   return {
     ...base,
     accent: accentColor,
+    // Cream text on ochre is under 3:1, so ochre fills carry dark ink in both modes.
+    onAccent: accent === "ochre" ? ON_OCHRE : base.onAccent,
     accentSoft: mix({ color: accentHex, base: base.bg, amount: scheme === "dark" ? 0.28 : 0.16 }),
   };
 };

@@ -3,7 +3,7 @@ import { StyleSheet, TextInput, View, type TextInputProps } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS, TAP } from "@/theme/tokens";
 import { Icon, type IconName } from "./Icon";
-import { Tap } from "./Tap";
+import { Tap, PRESS_DELAY_MS } from "./Tap";
 import { Text } from "./Text";
 import { SquircleFill } from "./Squircle";
 
@@ -46,7 +46,7 @@ export const Field = forwardRef<TextInput, FieldProps>(({ label, icon, error, se
           {...input}
         />
         {secret ? (
-          <Tap accessibilityLabel={revealed ? "Hide password" : "Show password"} onPress={() => setRevealed((value) => !value)} style={styles.eye}>
+          <Tap unstable_pressDelay={PRESS_DELAY_MS} accessibilityLabel={revealed ? "Hide password" : "Show password"} onPress={() => setRevealed((value) => !value)} style={styles.eye}>
             <Icon name={revealed ? "eye-off" : "eye"} size={20} color={colors.ink2} />
           </Tap>
         ) : null}

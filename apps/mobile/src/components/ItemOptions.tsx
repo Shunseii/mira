@@ -4,7 +4,7 @@ import { StyleSheet, View } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { GroupChip } from "./GroupBadge";
 import { Icon } from "./Icon";
-import { Tap } from "./Tap";
+import { Tap, PRESS_DELAY_MS } from "./Tap";
 import { Text } from "./Text";
 
 /** One 48pt row of the options table: label on the left, control on the right. */
@@ -17,7 +17,7 @@ export const OptionRow = ({ label, hint, children }: { label: string; hint?: str
           {label}
         </Text>
         {hint ? (
-          <Text variant="tag" color="ink3">
+          <Text variant="tag" color="ink2">
             {hint}
           </Text>
         ) : null}
@@ -45,6 +45,7 @@ export const Stepper = ({ value, onChange }: { value: number | undefined; onChan
   return (
     <View style={styles.stepper}>
       <Tap
+        unstable_pressDelay={PRESS_DELAY_MS}
         accessibilityRole="button"
         accessibilityLabel="Less"
         feedback="select"
@@ -61,6 +62,7 @@ export const Stepper = ({ value, onChange }: { value: number | undefined; onChan
         </Text>
       </View>
       <Tap
+        unstable_pressDelay={PRESS_DELAY_MS}
         accessibilityRole="button"
         accessibilityLabel="More"
         feedback="select"
@@ -77,7 +79,7 @@ export const Stepper = ({ value, onChange }: { value: number | undefined; onChan
 export const GroupValue = ({ group, onPress }: { group: Group | undefined; onPress: () => void }) => {
   const { colors } = useTheme();
   return (
-    <Tap accessibilityRole="button" accessibilityLabel={`Group: ${group?.name ?? "none"}`} onPress={onPress} pressScale={0.96}>
+    <Tap unstable_pressDelay={PRESS_DELAY_MS} accessibilityRole="button" accessibilityLabel={`Group: ${group?.name ?? "none"}`} onPress={onPress} pressScale={0.96}>
       {group ? (
         <GroupChip group={group} name={group.name} variant="value" trailing={<Icon name="chevrons-up-down" size={16} color={colors.ink3} />} />
       ) : (
@@ -95,7 +97,7 @@ export const GroupValue = ({ group, onPress }: { group: Group | undefined; onPre
 export const MonthValue = ({ month, onPress }: { month: MonthKey; onPress: () => void }) => {
   const { colors } = useTheme();
   return (
-    <Tap accessibilityRole="button" accessibilityLabel={`List: ${monthName(month)} ${monthYear(month)}`} onPress={onPress} pressScale={0.96}>
+    <Tap unstable_pressDelay={PRESS_DELAY_MS} accessibilityRole="button" accessibilityLabel={`List: ${monthName(month)} ${monthYear(month)}`} onPress={onPress} pressScale={0.96}>
       <View style={styles.plainValue}>
         <Text variant="bodyStrong">
           {monthName(month)} {monthYear(month)}

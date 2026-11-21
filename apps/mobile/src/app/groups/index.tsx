@@ -8,14 +8,13 @@ import ReorderableList, { useIsActive, useReorderableDrag, type ReorderableListR
 import { Button } from "@/components/Button";
 import { GroupBadge, GroupCard, useGroupCardInk } from "@/components/GroupBadge";
 import { Icon } from "@/components/Icon";
+import { NavBar, NavTitle } from "@/components/NavBar";
 import { Screen } from "@/components/Screen";
 import { HOLD_MS, PRESS_DELAY_MS, Tap, haptic } from "@/components/Tap";
 import { Text } from "@/components/Text";
 import { UNDO_MS, UndoSnackbar } from "@/components/UndoSnackbar";
 import { useHousehold, useStoreQuery } from "@/data/HouseholdProvider";
-import { goBack } from "@/lib/navigation";
 import { clearUndo, usePendingUndo } from "@/lib/pendingUndo";
-import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS } from "@/theme/tokens";
 
 const describe = (group: Group): string | undefined =>
@@ -29,6 +28,7 @@ const GroupRow = ({ group, index, count, onMove }: { group: Group; index: number
   const { ink, muted, colored } = useGroupCardInk(group);
   return (
     <Tap
+      unstable_pressDelay={PRESS_DELAY_MS}
       accessibilityRole="button"
       accessibilityLabel={group.name}
       accessibilityHint="Opens the group. Hold and drag to reorder"
@@ -68,7 +68,6 @@ const GroupRow = ({ group, index, count, onMove }: { group: Group; index: number
 };
 
 export default function Groups() {
-  const { colors } = useTheme();
   const household = useHousehold();
   const groups = useStoreQuery((store) => liveGroups({ store }), []);
   const insets = useSafeAreaInsets();
@@ -92,17 +91,9 @@ export default function Groups() {
 
   return (
     <Screen>
+      <NavBar back={{ label: "Settings", fallback: "/settings" }} />
       <View style={styles.header}>
-        <Tap accessibilityRole="button" onPress={() => goBack("/settings")} style={styles.back}>
-          <Icon name="chevron-left" size={20} color={colors.accent} />
-          <Text variant="bodyStrong" color="accent" style={styles.backLabel}>
-            Settings
-          </Text>
-        </Tap>
-        <Text variant="heading">Groups</Text>
-        <Text variant="caption" color="ink2">
-          Hold and drag to reorder. This is the order groups appear in your list.
-        </Text>
+        <NavTitle detail="Hold and drag to reorder. This is the order groups appear in your list.">Groups</NavTitle>
       </View>
       <ReorderableList
         data={groups}
@@ -151,9 +142,7 @@ const FOOTER_HEIGHT = 76;
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  header: { paddingHorizontal: 20, gap: 6, paddingBottom: 12 },
-  back: { height: 44, flexDirection: "row", alignItems: "center", gap: 2, marginLeft: -8, alignSelf: "flex-start", paddingRight: 12 },
-  backLabel: { fontSize: 15 },
+  header: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 14 },
   list: { paddingHorizontal: 20 },
   cardSpacing: { paddingBottom: 6 },
   cardText: { flex: 1, gap: 1, paddingVertical: 8 },

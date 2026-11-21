@@ -23,7 +23,10 @@ type TapProps = Omit<PressableProps, "style" | "children"> & {
   dimWhenDisabled?: boolean;
 };
 
-/** Waits this long before showing a press, so a touch that turns into a scroll never highlights or shrinks (as on iOS). */
+/**
+ * Pass as unstable_pressDelay to a Tap inside a scroll view: waits this long before showing a press, so a touch that
+ * turns into a scroll never highlights or shrinks (as on iOS). Taps outside a scroll view respond at once.
+ */
 export const PRESS_DELAY_MS = 100;
 
 /** How long to hold a row to pick it up (press delay included). */
@@ -35,7 +38,7 @@ export const Tap = ({
   children,
   pressScale = 0.96,
   feedback = "none",
-  unstable_pressDelay = PRESS_DELAY_MS,
+  unstable_pressDelay = 0,
   onPressIn,
   onPressOut,
   onPress,

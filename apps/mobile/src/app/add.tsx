@@ -20,9 +20,10 @@ import Animated, { FadeIn, LinearTransition } from "react-native-reanimated";
 import { BUTTON_RADIUS, Button, IconButton } from "@/components/Button";
 import { FabMorph } from "@/components/FabMorph";
 import { NameField } from "@/components/NameField";
+import { NavBar, NavTitle, useNavScroll } from "@/components/NavBar";
 import { ItemFields } from "@/components/ItemFields";
 import { Screen } from "@/components/Screen";
-import { Tap, haptic } from "@/components/Tap";
+import { Tap, haptic, PRESS_DELAY_MS } from "@/components/Tap";
 import { Text } from "@/components/Text";
 import { UNDO_MS, UndoSnackbar } from "@/components/UndoSnackbar";
 import { useCurrentMonth, useHousehold, useStoreQuery } from "@/data/HouseholdProvider";
@@ -38,6 +39,7 @@ const UsualChip = ({ usual, onPress }: { usual: Usual; onPress: () => void }) =>
   const quantity = formatQuantity({ qty: usual.qty, unit: showUnits ? usual.unit : undefined });
   return (
     <Tap
+      unstable_pressDelay={PRESS_DELAY_MS}
       accessibilityRole="button"
       accessibilityLabel={`Use ${usual.name}`}
       feedback="select"
@@ -70,7 +72,10 @@ export default function AddItem() {
   const { userId } = useSession();
   const current = useCurrentMonth();
   const params = useLocalSearchParams<{ month?: string }>();
-  const [month, setMonth] = useState<MonthKey>(params.month && isMonthKey(params.month) ? params.month : current);
+  // The month the list was showing: where Back returns to, and where the item goes unless changed below.
+  const fromMonth = params.month && isMonthKey(params.month) ? params.month : current;
+  const [month, setMonth] = useState<MonthKey>(fromMonth);
+  const { scrollY, onScroll } = useNavScroll();
   const [name, setName] = useState("");
   const [qty, setQty] = useState<number | undefined>();
   const [unit, setUnit] = useState<string | undefined>();
@@ -185,23 +190,34 @@ export default function AddItem() {
       {(morphTarget) => (
         <Screen>
           <View style={styles.flex}>
-            <View style={styles.nav}>
-              <IconButton icon="arrow-left" label="Back" feedback="none" onPress={() => goBack()} />
-              <Text variant="title">Add item</Text>
-              <IconButton
-                icon="list-plus"
-                label="Add multiple"
-                on={keepAdding}
-                onPress={() => {
-                  setPrefs({ keepAdding: !keepAdding });
-                  setNotice({
-                    message: keepAdding ? "Add multiple off: back to the list after adding" : "Add multiple on: stays open for the next item",
-                  });
-                }}
-              />
-            </View>
+            <NavBar
+              back={{ label: monthName(fromMonth) }}
+              title="Add item"
+              scrollY={scrollY}
+              right={
+                <IconButton
+                  icon="list-plus"
+                  label="Add multiple"
+                  on={keepAdding}
+                  onPress={() => {
+                    setPrefs({ keepAdding: !keepAdding });
+                    setNotice({
+                      message: keepAdding ? "Add multiple off: back to the list after adding" : "Add multiple on: stays open for the next item",
+                    });
+                  }}
+                />
+              }
+            />
 
-            <KeyboardAwareScrollView mode="layout" bottomOffset={FOOTER_SPACE} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+            <KeyboardAwareScrollView
+              mode="layout"
+              bottomOffset={FOOTER_SPACE}
+              onScroll={onScroll}
+              scrollEventThrottle={16}
+              contentContainerStyle={styles.content}
+              keyboardShouldPersistTaps="handled"
+            >
+              <NavTitle>Add item</NavTitle>
               <NameField
                 ref={nameRef}
                 autoFocus
@@ -295,8 +311,7 @@ const FOOTER_SPACE = 88;
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  nav: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 4 },
-  content: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 24, gap: 18 },
+  content: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 24, gap: 18 },
   usuals: { gap: 10 },
   usualRow: { gap: 8, paddingRight: 20 },
   usual: { height: 42, borderRadius: 21, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 6 },

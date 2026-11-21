@@ -9,6 +9,7 @@ import { ColorRow, CustomColorSheet, type Appearance } from "@/components/ColorP
 import { GroupTintBadge, useGroupTone } from "@/components/GroupBadge";
 import { GroupIconPicker } from "@/components/GroupIconPicker";
 import { Icon } from "@/components/Icon";
+import { NavBar, NavTitle, useNavScroll } from "@/components/NavBar";
 import { Screen } from "@/components/Screen";
 import type { SheetRef } from "@/components/Sheet";
 import { Tap, haptic } from "@/components/Tap";
@@ -23,7 +24,7 @@ import { SquircleFill } from "@/components/Squircle";
 const SectionLabel = ({ label }: { label: string }) => (
   <Text variant="label" color="ink2">
     {label}{" "}
-    <Text variant="tag" color="ink3">
+    <Text variant="tag" color="ink2">
       optional
     </Text>
   </Text>
@@ -35,6 +36,8 @@ export default function EditGroup() {
   const household = useHousehold();
   const { id } = useLocalSearchParams<{ id: string }>();
   const isNew = id === "new";
+  const title = isNew ? "New group" : "Edit group";
+  const { scrollY, onScroll } = useNavScroll();
   const existing = useStoreQuery((store) => (isNew ? undefined : readGroup({ store, id })), [id, isNew]);
 
   // The icon grid fills in once the screen has slid in; drawing ~100 icons during the slide stalls it.
@@ -85,22 +88,28 @@ export default function EditGroup() {
 
   return (
     <Screen>
-      <View style={styles.flex}>
-        <KeyboardAwareScrollView mode="layout" bottomOffset={FOOTER_SPACE} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <View style={styles.nav}>
-            <Tap accessibilityRole="button" onPress={() => goBack("/groups")} style={styles.back}>
-              <Icon name="chevron-left" size={20} color={colors.accent} />
-              <Text variant="bodyStrong" color="accent" style={styles.backLabel}>
-                Groups
-              </Text>
+      <NavBar
+        back={{ label: "Groups", fallback: "/groups" }}
+        title={title}
+        scrollY={scrollY}
+        right={
+          isNew ? null : (
+            <Tap accessibilityRole="button" accessibilityLabel="Delete group" onPress={remove} style={styles.trash}>
+              <Icon name="trash-2" size={20} color={colors.ink2} />
             </Tap>
-            {isNew ? null : (
-              <Tap accessibilityRole="button" accessibilityLabel="Delete group" onPress={remove} style={styles.trash}>
-                <Icon name="trash-2" size={20} color={colors.ink2} />
-              </Tap>
-            )}
-          </View>
-          <Text variant="display">{isNew ? "New group" : "Edit group"}</Text>
+          )
+        }
+      />
+      <View style={styles.flex}>
+        <KeyboardAwareScrollView
+          mode="layout"
+          bottomOffset={FOOTER_SPACE}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <NavTitle>{title}</NavTitle>
 
           <View style={styles.block}>
             <Text variant="label" color="ink2">
@@ -142,7 +151,7 @@ export default function EditGroup() {
           <View style={styles.block}>
             <SectionLabel label="Color" />
             <ColorRow value={appearance} onChange={setAppearance} onCustom={openCustom} />
-            <Text variant="tag" color="ink3">
+            <Text variant="tag" color="ink2">
               Shades adjust automatically so text stays readable
             </Text>
           </View>
@@ -177,11 +186,8 @@ const FOOTER_SPACE = 100;
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingBottom: 24, gap: 22 },
+  content: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 24, gap: 22 },
   footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16, borderTopWidth: StyleSheet.hairlineWidth },
-  nav: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: -10 },
-  back: { height: 44, flexDirection: "row", alignItems: "center", gap: 2, marginLeft: -8, paddingRight: 8 },
-  backLabel: { fontSize: 15 },
   trash: { width: 44, height: 44, alignItems: "center", justifyContent: "center", marginRight: -10 },
   block: { gap: 10 },
   nameField: { height: 56, paddingLeft: 11, paddingRight: 17, flexDirection: "row", alignItems: "center", gap: 12 },
