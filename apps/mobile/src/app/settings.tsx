@@ -430,6 +430,12 @@ export default function Settings() {
             />
           ))}
         </View>
+        <PrefToggle
+          label="Scroll to new items"
+          description="After adding, scroll the list to the new item if it's out of view"
+          value={prefs.scrollToNew}
+          onChange={(value) => setPrefs({ scrollToNew: value })}
+        />
         <View style={styles.choiceText}>
           <Text variant="label">Group labels</Text>
           <Text variant="caption" color="ink2">

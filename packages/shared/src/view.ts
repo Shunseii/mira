@@ -131,6 +131,19 @@ export type Usual = {
   lastAddedAt: number;
 };
 
+const openNamesOf = ({ store, month }: { store: Store; month: MonthKey }): Set<string> =>
+  new Set(
+    liveItemsOf({ store, month })
+      .filter((item) => item.checkedAt === undefined)
+      .map((item) => normalizeName(item.name)),
+  );
+
+/** Whether `name` is already on `month`'s list and not checked off yet (exact match, ignoring case and spacing). */
+export const isOpenOnList = ({ store, month, name }: { store: Store; month: MonthKey; name: string }): boolean => {
+  const key = normalizeName(name);
+  return key !== "" && openNamesOf({ store, month }).has(key);
+};
+
 /**
  * Frequently bought items, derived from history: distinct months an item name
  * appeared in, most frequent first. Names already open in `month` are skipped, and so is
@@ -138,11 +151,7 @@ export type Usual = {
  */
 export const usuals = ({ store, month, query = "", limit = 12 }: { store: Store; month: MonthKey; query?: string; limit?: number }): Usual[] => {
   const needle = normalizeName(query);
-  const openNow = new Set(
-    liveItemsOf({ store, month })
-      .filter((item) => item.checkedAt === undefined)
-      .map((item) => normalizeName(item.name)),
-  );
+  const openNow = openNamesOf({ store, month });
   const byName = new Map<string, Usual & { monthSet: Set<string> }>();
   for (const item of readAll({ store, table: TABLES.items, read: readItem })) {
     if (item.deletedAt !== undefined) continue;

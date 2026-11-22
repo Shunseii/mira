@@ -17,7 +17,7 @@ import {
 } from "@mira/shared";
 import { router, useFocusEffect } from "expo-router";
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { BackHandler, RefreshControl, StyleSheet, TextInput, View } from "react-native";
+import { BackHandler, RefreshControl, type ScrollView, StyleSheet, TextInput, View } from "react-native";
 import Animated, {
   type AnimatedRef,
   Extrapolation,
@@ -27,6 +27,7 @@ import Animated, {
   measure,
   useAnimatedReaction,
   useAnimatedRef,
+  useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
   type SharedValue,
@@ -60,6 +61,7 @@ import { Text } from "@/components/Text";
 import { useCurrentMonth, useHousehold, useHouseholdState, useStoreQuery } from "@/data/HouseholdProvider";
 import { getPref, setPrefs, usePref, type ListView } from "@/data/prefs";
 import { updateSession, useSession } from "@/data/session";
+import { takeAddedItems } from "@/lib/addedItems";
 import { setExpandOrigin, useOriginHidden } from "@/lib/expandOrigin";
 import { createStabilizer } from "@/lib/stableRows";
 import { ROW_LAYOUT, SPRING_SNAPPY } from "@/theme/motion";
@@ -594,6 +596,77 @@ const DraggableItem = memo(
 );
 DraggableItem.displayName = "DraggableItem";
 
+/** Room kept between a row scrolled into view and the edge it stops at. */
+const REVEAL_MARGIN = 16;
+/** How many frames to wait for a just-added row to mount before giving up on scrolling to it. */
+const REVEAL_FRAMES = 30;
+
+const frameInWindow = (view: Pick<View, "measureInWindow">) =>
+  new Promise<{ y: number; height: number }>((resolve) => view.measureInWindow((_x, y, _width, height) => resolve({ y, height })));
+
+/**
+ * Back from Add item, scrolls the list to the last item added there if it's out of view (the Scroll to new
+ * items pref). Leaves the list alone when that item is hidden: filtered out by the search, or in another month.
+ */
+const useScrollToAdded = ({
+  rows,
+  scrollRef,
+  scrollOffset,
+  rowViews,
+  bottomCover,
+}: {
+  rows: Row[];
+  scrollRef: React.RefObject<ScrollView | null>;
+  scrollOffset: SharedValue<number>;
+  rowViews: React.RefObject<Map<string, View>>;
+  /** How much of the bottom of the list the + button covers. */
+  bottomCover: number;
+}) => {
+  const rowsRef = useRef(rows);
+  useEffect(() => {
+    rowsRef.current = rows;
+  }, [rows]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const added = takeAddedItems();
+      if (added.length === 0 || !getPref("scrollToNew")) return undefined;
+      const shown = new Set(rowsRef.current.filter((row) => row.kind === "item" && !row.hidden && !row.inChecked).map((row) => row.key));
+      const target = [...added].reverse().find((id) => shown.has(id));
+      if (!target) return undefined;
+
+      let frame = 0;
+      let cancelled = false;
+      const reveal = async (framesLeft: number) => {
+        const row = rowViews.current.get(target);
+        const scroll = scrollRef.current;
+        const scrollHost = scroll?.getNativeScrollRef();
+        if (!row || !scroll || !scrollHost) {
+          if (framesLeft > 0) frame = requestAnimationFrame(() => void reveal(framesLeft - 1));
+          return;
+        }
+        const [rowFrame, listFrame] = await Promise.all([frameInWindow(row), frameInWindow(scrollHost)]);
+        if (cancelled) return;
+        const visibleTop = listFrame.y;
+        const visibleBottom = listFrame.y + listFrame.height - bottomCover;
+        const distance =
+          rowFrame.y < visibleTop
+            ? rowFrame.y - visibleTop - REVEAL_MARGIN
+            : rowFrame.y + rowFrame.height > visibleBottom
+              ? rowFrame.y + rowFrame.height - visibleBottom + REVEAL_MARGIN
+              : 0;
+        if (distance === 0) return;
+        scroll.scrollTo({ y: Math.max(0, scrollOffset.get() + distance), animated: true });
+      };
+      void reveal(REVEAL_FRAMES);
+      return () => {
+        cancelled = true;
+        cancelAnimationFrame(frame);
+      };
+    }, [bottomCover, rowViews, scrollOffset, scrollRef]),
+  );
+};
+
 export default function ListScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -659,6 +732,22 @@ export default function ListScreen() {
       );
   }, [groupsById, listView, searchView, stableGroup, stableItem, view]);
   const nothingShown = rows.every((row) => row.hidden);
+
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollOffset = useSharedValue(0);
+  const trackScroll = useAnimatedScrollHandler((event) => {
+    scrollOffset.set(event.contentOffset.y);
+  });
+  const rowViews = useRef(new Map<string, View>());
+  const trackRow = useCallback(
+    (key: string) => (view: View | null) => {
+      if (view) rowViews.current.set(key, view);
+      else rowViews.current.delete(key);
+    },
+    [],
+  );
+  const dockPadding = Math.max(insets.bottom, 16) + 8;
+  useScrollToAdded({ rows, scrollRef, scrollOffset, rowViews, bottomCover: FAB_SIZE + dockPadding });
   const pendingSet = useMemo(() => new Set(pending), [pending]);
 
   const index = months.indexOf(month);
@@ -823,16 +912,20 @@ export default function ListScreen() {
           {item}
         </CheckedRow>
       ) : (
-        <View style={row.hidden && styles.folded}>{item}</View>
+        <View ref={trackRow(row.key)} style={row.hidden && styles.folded}>
+          {item}
+        </View>
       );
     },
-    [checkAll, fold, foldAnchor, foldWarming, handlers, pendingSet, reorderMode, toggleChecked],
+    [checkAll, fold, foldAnchor, foldWarming, handlers, pendingSet, reorderMode, toggleChecked, trackRow],
   );
 
   return (
     <Screen edges={["top"]}>
       <FoldSync fold={fold} />
       <ScrollViewContainer
+        ref={scrollRef}
+        onScroll={trackScroll}
         contentContainerStyle={[styles.content, { paddingBottom: 120 + insets.bottom }]}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
@@ -925,7 +1018,7 @@ export default function ListScreen() {
         <Animated.View
           entering={FadeIn.duration(160)}
           pointerEvents="box-none"
-          style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}
+          style={[styles.dock, { paddingBottom: dockPadding }]}
         >
           <View ref={fab} collapsable={false} style={fabHidden ? styles.hidden : null}>
             <Tap

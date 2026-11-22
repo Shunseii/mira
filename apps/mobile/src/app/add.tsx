@@ -3,6 +3,7 @@ import {
   deleteItems,
   formatQuantity,
   isMonthKey,
+  isOpenOnList,
   lastItemNamed,
   monthName,
   readGroup,
@@ -14,21 +15,21 @@ import {
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ScrollView, StyleSheet, TextInput, View } from "react-native";
-import { KeyboardAwareScrollView, KeyboardController, KeyboardEvents, KeyboardStickyView } from "react-native-keyboard-controller";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { KeyboardController, KeyboardEvents, KeyboardStickyView } from "react-native-keyboard-controller";
 import Animated, { FadeIn, LinearTransition } from "react-native-reanimated";
 import { BUTTON_RADIUS, Button, IconButton } from "@/components/Button";
 import { FabMorph } from "@/components/FabMorph";
-import { NameField } from "@/components/NameField";
+import { FormScreen, useStickyOffset } from "@/components/FormScreen";
+import { NameField, type NameFieldHint } from "@/components/NameField";
 import { NavBar, NavTitle, useNavScroll } from "@/components/NavBar";
 import { ItemFields } from "@/components/ItemFields";
-import { Screen } from "@/components/Screen";
 import { Tap, haptic, PRESS_DELAY_MS } from "@/components/Tap";
 import { Text } from "@/components/Text";
 import { UNDO_MS, UndoSnackbar } from "@/components/UndoSnackbar";
 import { useCurrentMonth, useHousehold, useStoreQuery } from "@/data/HouseholdProvider";
 import { setPrefs, usePref } from "@/data/prefs";
 import { useSession } from "@/data/session";
+import { noteAddedItem } from "@/lib/addedItems";
 import { goBack } from "@/lib/navigation";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS } from "@/theme/tokens";
@@ -66,8 +67,6 @@ const UsualChip = ({ usual, onPress }: { usual: Usual; onPress: () => void }) =>
 const KEYBOARD_RETRY_MS = [600];
 
 export default function AddItem() {
-  const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const household = useHousehold();
   const { userId } = useSession();
   const current = useCurrentMonth();
@@ -93,7 +92,7 @@ export default function AddItem() {
   const keepAdding = usePref("keepAdding");
   const newItems = usePref("newItems");
   const addLabel = `Add to ${monthName(month)}`;
-  const stickyOffset = { closed: 0, opened: insets.bottom };
+  const stickyOffset = useStickyOffset();
   // The page is still invisible as the morph leaves the +, so the fields below the name mount a frame
   // later: the morph starts sooner instead of waiting for the whole form.
   const [restReady, setRestReady] = useState(false);
@@ -127,6 +126,7 @@ export default function AddItem() {
   const chips = useStoreQuery((store) => (restReady ? usuals({ store, month, query: name, limit: 8 }) : []), [month, name, restReady]);
   const unitHints = useStoreQuery((store) => suggestUnits({ store, name }), [name]);
   const remembered = useStoreQuery((store) => lastItemNamed({ store, name }), [name]);
+  const alreadyOnList = useStoreQuery((store) => isOpenOnList({ store, month, name }), [month, name]);
   const group = useStoreQuery((store) => (groupId ? readGroup({ store, id: groupId }) : undefined), [groupId]);
 
   // Typing a name you've bought before brings back its unit and group, unless you've picked them.
@@ -168,6 +168,7 @@ export default function AddItem() {
       });
     });
     haptic("success");
+    if (itemId) noteAddedItem(itemId);
     if (andClose) {
       goBack();
       return;
@@ -195,8 +196,8 @@ export default function AddItem() {
   return (
     <FabMorph label={addLabel} labelDimmed={!name.trim()} radius={BUTTON_RADIUS} stickyOffset={stickyOffset}>
       {(morphTarget) => (
-        <Screen>
-          <View style={styles.flex}>
+        <FormScreen
+          header={
             <NavBar
               back={{ label: monthName(fromMonth) }}
               title="Add item"
@@ -215,69 +216,14 @@ export default function AddItem() {
                 />
               }
             />
-
-            <KeyboardAwareScrollView
-              mode="layout"
-              bottomOffset={FOOTER_SPACE}
-              onScroll={onScroll}
-              scrollEventThrottle={16}
-              contentContainerStyle={styles.content}
-              keyboardShouldPersistTaps="handled"
-            >
-              <NavTitle>Add item</NavTitle>
-              <NameField
-                ref={nameRef}
-                autoFocus
-                value={name}
-                onChangeText={setName}
-                placeholder="e.g. Tomatoes"
-                returnKeyType="done"
-                submitBehavior="submit"
-                onSubmitEditing={() => add({ andClose: false })}
-              />
-
-              {restReady && chips.length > 0 ? (
-                <Animated.View entering={FadeIn} layout={LinearTransition} style={styles.usuals}>
-                  <Text variant="label" color="ink2">
-                    Your usuals
-                  </Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    keyboardShouldPersistTaps="always"
-                    contentContainerStyle={styles.usualRow}
-                  >
-                    {chips.map((usual) => (
-                      <UsualChip key={usual.name} usual={usual} onPress={() => useUsual(usual)} />
-                    ))}
-                  </ScrollView>
-                </Animated.View>
-              ) : null}
-
-              {restReady ? (
-                <ItemFields
-                  value={{ groupId, qty, unit, month, note }}
-                  onChange={(patch) => {
-                    if ("groupId" in patch) {
-                      setGroupId(patch.groupId);
-                      setGroupTouched(true);
-                    }
-                    if ("qty" in patch) setQty(patch.qty);
-                    if ("unit" in patch) {
-                      setUnit(patch.unit);
-                      setUnitTouched(true);
-                    }
-                    if (patch.month) setMonth(patch.month);
-                    if (patch.note !== undefined) setNote(patch.note);
-                  }}
-                  unitSuggestions={unitHints.suggestions}
-                />
-              ) : null}
-            </KeyboardAwareScrollView>
-
-            {/* Its own layer riding the keyboard just above the footer: as the footer's child it would sit
-                outside the footer's bounds, where Android doesn't deliver touches (Undo wouldn't work). */}
-            {notice ? (
+          }
+          onScroll={onScroll}
+          contentContainerStyle={styles.content}
+          onFooterLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
+          overlay={
+            // Its own layer riding the keyboard just above the footer: as the footer's child it would sit
+            // outside the footer's bounds, where Android doesn't deliver touches (Undo wouldn't work).
+            notice ? (
               <KeyboardStickyView offset={stickyOffset} style={[styles.snackbarLayer, { bottom: footerHeight + 8 }]}>
                 <UndoSnackbar
                   message={notice.message}
@@ -294,37 +240,78 @@ export default function AddItem() {
                   bottom={0}
                 />
               </KeyboardStickyView>
-            ) : null}
+            ) : null
+          }
+          footer={
+            // The list's + morphs into this button; it shows once the morph lands on it.
+            <View ref={morphTarget.ref} onLayout={morphTarget.onLayout} collapsable={false} style={morphTarget.visible ? null : styles.hidden}>
+              <Button label={addLabel} onPress={() => add({ andClose: !keepAdding })} disabled={!name.trim()} />
+            </View>
+          }
+        >
+          <NavTitle>Add item</NavTitle>
+          <NameField
+            ref={nameRef}
+            autoFocus
+            value={name}
+            onChangeText={setName}
+            placeholder="e.g. Tomatoes"
+            returnKeyType="done"
+            submitBehavior="submit"
+            onSubmitEditing={() => add({ andClose: false })}
+            hint={alreadyOnList ? ALREADY_ON_LIST_HINT : undefined}
+          />
 
-            {/* Pinned to the top of the keyboard while it's open, so Add is always reachable. */}
-            <KeyboardStickyView
-              offset={stickyOffset}
-              onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
-              style={[styles.footer, { backgroundColor: colors.bg }]}
-            >
-              {/* The list's + morphs into this button; it shows once the morph lands on it. */}
-              <View ref={morphTarget.ref} onLayout={morphTarget.onLayout} collapsable={false} style={morphTarget.visible ? null : styles.hidden}>
-                <Button label={addLabel} onPress={() => add({ andClose: !keepAdding })} disabled={!name.trim()} />
-              </View>
-            </KeyboardStickyView>
-          </View>
+          {restReady && chips.length > 0 ? (
+            <Animated.View entering={FadeIn} layout={LinearTransition} style={styles.usuals}>
+              <Text variant="label" color="ink2">
+                Your usuals
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyboardShouldPersistTaps="always"
+                contentContainerStyle={styles.usualRow}
+              >
+                {chips.map((usual) => (
+                  <UsualChip key={usual.name} usual={usual} onPress={() => useUsual(usual)} />
+                ))}
+              </ScrollView>
+            </Animated.View>
+          ) : null}
 
-        </Screen>
+          {restReady ? (
+            <ItemFields
+              value={{ groupId, qty, unit, month, note }}
+              onChange={(patch) => {
+                if ("groupId" in patch) {
+                  setGroupId(patch.groupId);
+                  setGroupTouched(true);
+                }
+                if ("qty" in patch) setQty(patch.qty);
+                if ("unit" in patch) {
+                  setUnit(patch.unit);
+                  setUnitTouched(true);
+                }
+                if (patch.month) setMonth(patch.month);
+                if (patch.note !== undefined) setNote(patch.note);
+              }}
+              unitSuggestions={unitHints.suggestions}
+            />
+          ) : null}
+        </FormScreen>
       )}
     </FabMorph>
   );
 }
 
-/** Room kept under the last form row so it never ends up behind the pinned button. */
-const FOOTER_SPACE = 88;
+const ALREADY_ON_LIST_HINT: NameFieldHint = { icon: "list-checks", text: "Already on the list" };
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
   content: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 24, gap: 18 },
   usuals: { gap: 10 },
   usualRow: { gap: 8, paddingRight: 20 },
   usual: { height: 42, borderRadius: 21, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 6 },
   snackbarLayer: { position: "absolute", left: 0, right: 0, height: 52 },
-  footer: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
   hidden: { opacity: 0 },
 });

@@ -26,6 +26,8 @@ type Prefs = {
   keepAdding: boolean;
   /** Where items this person adds land in the shared list order. */
   newItems: NewItemPlacement;
+  /** Back on the list after adding, scroll to the new item if it's out of view. */
+  scrollToNew: boolean;
 };
 
 const KEY = "mira.prefs";
@@ -33,7 +35,7 @@ const KEY = "mira.prefs";
 const isCheckedItems = (value: unknown): value is CheckedItems => value === "stay" || value === "end" || value === "section";
 
 const load = (): Prefs => {
-  const fallback: Prefs = { themeMode: "system", accent: "terracotta", listView: "group", showUnits: true, checkedItems: "end", checkedCollapsed: true, groupLabel: "name", keepAdding: false, newItems: "bottom" };
+  const fallback: Prefs = { themeMode: "system", accent: "terracotta", listView: "group", showUnits: true, checkedItems: "end", checkedCollapsed: true, groupLabel: "name", keepAdding: false, newItems: "bottom", scrollToNew: true };
   try {
     const parsed = JSON.parse(deviceStorage.get(KEY) ?? "{}") as Partial<Record<keyof Prefs | "checkedToEnd", unknown>>;
     const themeMode = parsed.themeMode === "light" || parsed.themeMode === "dark" ? parsed.themeMode : "system";
@@ -52,6 +54,7 @@ const load = (): Prefs => {
       groupLabel: parsed.groupLabel === "icon" ? "icon" : "name",
       keepAdding: parsed.keepAdding === true,
       newItems: parsed.newItems === "top" ? "top" : "bottom",
+      scrollToNew: parsed.scrollToNew !== false,
     };
   } catch {
     return fallback;

@@ -11,10 +11,10 @@ import {
 } from "@mira/shared";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
+import { FormScreen } from "@/components/FormScreen";
 import { Icon } from "@/components/Icon";
 import { ItemFields } from "@/components/ItemFields";
 import { parseQuantity } from "@/components/ItemOptions";
@@ -53,6 +53,10 @@ export default function ItemDetail() {
   }, [draft, item]);
   const patchDraft = (patch: Partial<Draft>) => setDraft((previous) => (previous ? { ...previous, ...patch } : previous));
   const addedBy = useStoreQuery((store) => (item ? readUser({ store, id: item.addedBy }) : undefined), [item?.addedBy]);
+  const checkedBy = useStoreQuery(
+    (store) => (item?.checkedBy ? readUser({ store, id: item.checkedBy }) : undefined),
+    [item?.checkedBy],
+  );
   const unitHints = useStoreQuery((store) => suggestUnits({ store, name: draft?.name ?? "" }), [draft?.name]);
   const showUnits = usePref("showUnits");
 
@@ -87,8 +91,8 @@ export default function ItemDetail() {
   };
 
   return (
-    <Screen>
-      <KeyboardAvoidingView behavior="padding" style={styles.flex}>
+    <FormScreen
+      header={
         <NavBar
           back={{ label: monthName(item.listId) }}
           right={
@@ -106,37 +110,42 @@ export default function ItemDetail() {
             </Tap>
           }
         />
+      }
+      contentContainerStyle={styles.content}
+      footer={<Button label="Save" onPress={save} disabled={!draft.name.trim()} />}
+    >
+      <NameField value={draft.name} onChangeText={(text) => patchDraft({ name: text })} returnKeyType="done" />
 
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <NameField value={draft.name} onChangeText={(text) => patchDraft({ name: text })} returnKeyType="done" />
+      <ItemFields value={draft} onChange={patchDraft} unitSuggestions={unitHints.suggestions} />
 
-          <ItemFields value={draft} onChange={patchDraft} unitSuggestions={unitHints.suggestions} />
-
-          <View style={styles.addedBy}>
-            <Avatar name={addedBy?.name ?? "?"} seed={item.addedBy} size={32} />
-            <View>
-              <Text variant="label">Added by {addedBy?.name ?? "someone"}</Text>
-              <Text variant="caption" color="ink2">
-                {formatDay(item.addedAt)}
-              </Text>
-            </View>
-          </View>
-        </ScrollView>
-
-        <View style={styles.footer}>
-          <Button label="Save" onPress={save} disabled={!draft.name.trim()} />
+      <View style={styles.byLine}>
+        <Avatar name={addedBy?.name ?? "?"} seed={item.addedBy} size={32} />
+        <View>
+          <Text variant="label">Added by {addedBy?.name ?? "someone"}</Text>
+          <Text variant="caption" color="ink2">
+            {formatDay(item.addedAt)}
+          </Text>
         </View>
-      </KeyboardAvoidingView>
+      </View>
 
-    </Screen>
+      {item.checkedAt !== undefined && (
+        <View style={styles.byLine}>
+          <Avatar name={checkedBy?.name ?? "?"} seed={item.checkedBy ?? ""} size={32} />
+          <View>
+            <Text variant="label">Checked by {checkedBy?.name ?? "someone"}</Text>
+            <Text variant="caption" color="ink2">
+              {formatDay(item.checkedAt)}
+            </Text>
+          </View>
+        </View>
+      )}
+    </FormScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
   missing: { alignItems: "center", justifyContent: "center", gap: 16 },
   trash: { width: 44, height: 44, alignItems: "center", justifyContent: "center", marginRight: -10 },
   content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24, gap: 22 },
-  addedBy: { flexDirection: "row", alignItems: "center", gap: 12 },
-  footer: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
+  byLine: { flexDirection: "row", alignItems: "center", gap: 12 },
 });

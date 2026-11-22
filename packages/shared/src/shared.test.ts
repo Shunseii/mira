@@ -42,6 +42,7 @@ import {
   hueOf,
   normalizeGroupColor,
   usuals,
+  isOpenOnList,
   type MonthKey,
 } from "./index";
 
@@ -334,6 +335,21 @@ describe("add flow helpers", () => {
     for (const name of ["Apple", "Potato", "Pineapple"]) addItem({ store, month: OCT, userId: "u1", item: { name } });
     expect(usuals({ store, month: NOV, query: "apple" }).map((usual) => usual.name)).toEqual(["Pineapple"]);
     expect(usuals({ store, month: NOV, query: "Apple " }).map((usual) => usual.name)).toEqual(["Pineapple"]);
+  });
+
+  it("knows a name is already open on the month's list, exactly and ignoring case", () => {
+    const store = newStore();
+    addItem({ store, month: NOV, userId: "u1", item: { name: "Tomatoes" } });
+    const checked = addItem({ store, month: NOV, userId: "u1", item: { name: "Bread" } });
+    setChecked({ store, itemId: checked, checked: true, userId: "u1" });
+    const deleted = addItem({ store, month: NOV, userId: "u1", item: { name: "Honey" } });
+    deleteItem({ store, itemId: deleted });
+    expect(isOpenOnList({ store, month: NOV, name: "  tomatoes " })).toBe(true);
+    expect(isOpenOnList({ store, month: NOV, name: "Tomatoe" })).toBe(false);
+    expect(isOpenOnList({ store, month: DEC, name: "Tomatoes" })).toBe(false);
+    expect(isOpenOnList({ store, month: NOV, name: "Bread" })).toBe(false);
+    expect(isOpenOnList({ store, month: NOV, name: "Honey" })).toBe(false);
+    expect(isOpenOnList({ store, month: NOV, name: "" })).toBe(false);
   });
 
   it("suggests the unit last used for the same name, then household favourites, then defaults", () => {
