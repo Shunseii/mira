@@ -26,8 +26,8 @@ import { AppearanceTransitionProvider } from "@/theme/AppearanceTransition";
 import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
 
 void SplashScreen.preventAutoHideAsync();
-// Cut straight to the list: Android would otherwise fade the splash out over 400 ms.
-SplashScreen.setOptions({ duration: 0 });
+// The list is already drawn underneath, so fading the splash out crossfades into it.
+SplashScreen.setOptions({ duration: 200, fade: true });
 
 const Navigation = () => {
   const { colors, scheme } = useTheme();
