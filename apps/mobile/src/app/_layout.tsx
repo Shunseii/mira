@@ -12,7 +12,6 @@ import * as QuickActions from "expo-quick-actions";
 import { useQuickActionRouting } from "expo-quick-actions/router";
 import { Stack } from "expo-router";
 import { GROUP_ICON_FONT } from "@/components/groupIconGlyphs";
-import { SplashOverlay } from "@/components/SplashOverlay";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
@@ -23,11 +22,12 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { HouseholdProvider, useOptionalHousehold } from "@/data/HouseholdProvider";
 import { loginStep, useSession } from "@/data/session";
-import { splashHandoff } from "@/lib/splashHandoff";
 import { AppearanceTransitionProvider } from "@/theme/AppearanceTransition";
 import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
 
 void SplashScreen.preventAutoHideAsync();
+// Cut straight to the list: Android would otherwise fade the splash out over 400 ms.
+SplashScreen.setOptions({ duration: 0 });
 
 const Navigation = () => {
   const { colors, scheme } = useTheme();
@@ -37,9 +37,8 @@ const Navigation = () => {
   // Keep the splash up until it has (a few ms), instead of rendering without data.
   const ready = !signedIn || household !== undefined;
 
-  // SplashOverlay hides the native splash itself once it can stand in for it; without one (web), hide here.
   useEffect(() => {
-    if (ready && splashHandoff.get().done) void SplashScreen.hideAsync();
+    if (ready) void SplashScreen.hideAsync();
   }, [ready]);
 
   useEffect(() => {
@@ -76,7 +75,6 @@ const Navigation = () => {
           <Stack.Screen name="groups/[id]" />
         </Stack.Protected>
       </Stack>
-      <SplashOverlay />
     </>
   );
 };
