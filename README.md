@@ -1,12 +1,10 @@
+<p align="center">
+  <img src="docs/banner.png" alt="Mira (ميرة): the household grocery list that works offline and syncs for everyone. Three phones show adding an item, this month's list grouped into sections, and the list in dark mode." />
+</p>
+
 # Mira (ميرة)
 
 A self-hosted, offline-first household grocery list. One list per month, shared live between everyone in the house. The list works fully offline and syncs when the server is reachable.
-
-<p align="center">
-  <img src="docs/screenshots/list.png" width="30%" alt="This month's list, grouped into sections like Fruits &amp; vegetables and Dairy &amp; eggs" />
-  <img src="docs/screenshots/add.png" width="30%" alt="Adding an item, with a suggestion from your usual items" />
-  <img src="docs/screenshots/dark.png" width="30%" alt="The list in dark mode" />
-</p>
 
 ## Features
 
