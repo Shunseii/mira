@@ -1,5 +1,5 @@
 import { authProtocols, monthKeyOf, rollover, stableHash, touchUser } from "@mira/shared";
-import { addNetworkStateListener } from "expo-network";
+import { addNetworkStateListener, getNetworkStateAsync } from "expo-network";
 import { AppState, type NativeEventSubscription } from "react-native";
 import { createMergeableStore, type MergeableStore } from "tinybase";
 import { createWsSynchronizer, type WsSynchronizer } from "tinybase/synchronizers/synchronizer-ws-client";
@@ -18,8 +18,8 @@ export type HouseholdState = {
   pending: string[];
   /** At least one full sync with the server has completed on this device. */
   hasSynced: boolean;
-  /** When a sync last sent changes made on this device (for a brief "Synced"). */
-  sentAt?: number;
+  /** When it last came back online after showing offline (for a brief "Synced"). */
+  reconnectedAt?: number;
 };
 
 export type Household = {
@@ -27,9 +27,11 @@ export type Household = {
   state: ReturnType<typeof createExternalStore<HouseholdState>>;
   /** Every local change goes through here so offline edits can be tracked. */
   write: (change: (store: MergeableStore) => void) => void;
-  /** Reconnect now if not online (pull-to-refresh, foreground, network back). */
-  /** Try to connect now; resolves once it is online or has given up for now. */
-  nudge: () => Promise<void>;
+  /**
+   * Reconnect now if not online. `asked`: the person asked (pull-to-refresh, the pill), so a failed
+   * attempt shows offline at once instead of retrying quietly first.
+   */
+  nudge: (options?: { asked?: boolean }) => Promise<void>;
   stop: () => Promise<void>;
 };
 
@@ -90,6 +92,13 @@ export const startHousehold = async ({
     hasSynced: deviceStorage.get(syncedKey) === "1",
   });
   const patch = (next: Partial<HouseholdState>) => state.set((previous) => ({ ...previous, ...next }));
+  let shownOffline = false;
+  const setStatus = (status: SyncStatus) => {
+    const reconnected = status === "online" && shownOffline;
+    if (status === "offline") shownOffline = true;
+    if (status === "online" || status === "unauthorized") shownOffline = false;
+    patch({ status, ...(reconnected ? { reconnectedAt: Date.now() } : {}) });
+  };
   // Saved a moment later and coalesced: a Keychain/Keystore write on every offline tap would hold up the tap itself.
   let persistTimer: ReturnType<typeof setTimeout> | undefined;
   const setPending = (pending: string[]) => {
@@ -139,6 +148,10 @@ export const startHousehold = async ({
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   let connecting = false;
   let stopped = false;
+  /** The OS says there's no network, so don't try (it would only hang until a timeout). */
+  let networkDown = false;
+  /** Someone asked for this attempt, so a failure shouldn't hide behind a quiet retry. */
+  let asked = false;
 
   const scheduleReconnect = () => {
     if (stopped || reconnectTimer || state.get().status === "unauthorized") return;
@@ -163,6 +176,10 @@ export const startHousehold = async ({
   /** One attempt at a time; callers during an attempt wait for that one. */
   const connect = (): Promise<void> => {
     if (stopped || synchronizer) return Promise.resolve();
+    if (networkDown) {
+      if (state.get().status !== "unauthorized") setStatus("offline");
+      return Promise.resolve();
+    }
     inFlight ??= attemptConnection().finally(() => {
       inFlight = undefined;
     });
@@ -185,26 +202,29 @@ export const startHousehold = async ({
         if (synchronizer !== created) return;
         // The OS often drops the socket while the app is in the background, so this usually fires on
         // resume. Reconnect straight away and only call it offline if that attempt fails too.
-        patch({ status: "connecting" });
+        setStatus("connecting");
         void dropConnection().then(connect);
       });
       await created.startSync();
       attempt = 0;
       deviceStorage.set(syncedKey, "1");
-      const sent = state.get().pending.length > 0;
-      patch({ status: "online", hasSynced: true, ...(sent ? { sentAt: Date.now() } : {}) });
+      patch({ hasSynced: true });
+      setStatus("online");
       setPending([]);
       housekeeping();
-    } catch {
+    } catch (error) {
       await dropConnection();
-      const check = await checkPassword({ serverUrl, password });
+      // A timeout means the server is unreachable; checking the password would only wait again.
+      const timedOut = error instanceof Error && error.message === "timeout";
+      const check = timedOut ? "unreachable" : await checkPassword({ serverUrl, password });
       // One failed attempt is often just the network waking up at launch or resume; the quick retry
       // usually lands, so stay "connecting" and only show offline once a retry has failed too.
-      const firstMiss = attempt === 0;
-      patch({ status: check === "wrong" ? "unauthorized" : firstMiss ? "connecting" : "offline" });
+      const quietRetry = attempt === 0 && !asked;
+      setStatus(check === "wrong" ? "unauthorized" : quietRetry ? "connecting" : "offline");
       scheduleReconnect();
     } finally {
       connecting = false;
+      asked = false;
     }
   };
 
@@ -219,8 +239,9 @@ export const startHousehold = async ({
       });
     });
 
-  const nudge = (): Promise<void> => {
+  const nudge: Household["nudge"] = (options) => {
     if (stopped || synchronizer || state.get().status === "unauthorized") return Promise.resolve();
+    if (options?.asked) asked = true;
     if (!inFlight) {
       if (reconnectTimer) clearTimeout(reconnectTimer);
       reconnectTimer = undefined;
@@ -229,6 +250,17 @@ export const startHousehold = async ({
     return connect().then(settled);
   };
 
+  const goneOffline = async () => {
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    reconnectTimer = undefined;
+    if (state.get().status !== "unauthorized") setStatus("offline");
+    // The socket can sit "open" for minutes after the network goes, so let it go now.
+    const openSocketRef = socket;
+    await dropConnection();
+    openSocketRef?.close();
+  };
+
+  networkDown = (await getNetworkStateAsync().catch(() => undefined))?.isConnected === false;
   persister = await startLocalPersistence({ store, dbName });
   patch({ ready: true });
   housekeeping();
@@ -240,7 +272,9 @@ export const startHousehold = async ({
     void nudge();
   });
   const network = addNetworkStateListener((network) => {
-    if (network.isConnected) void nudge();
+    networkDown = network.isConnected === false;
+    if (networkDown) void goneOffline();
+    else void nudge();
   });
 
   return {

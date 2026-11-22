@@ -16,13 +16,14 @@ import {
   type MonthView,
 } from "@mira/shared";
 import { router, useFocusEffect } from "expo-router";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { BackHandler, RefreshControl, StyleSheet, TextInput, View } from "react-native";
 import Animated, {
   FadeIn,
   LayoutAnimationConfig,
   useAnimatedStyle,
   useSharedValue,
+  type SharedValue,
   withSpring,
   withTiming,
 } from "react-native-reanimated";
@@ -51,7 +52,7 @@ import { UNDO_MS, UndoSnackbar } from "@/components/UndoSnackbar";
 import { HOLD_MS, Tap, haptic, PRESS_DELAY_MS } from "@/components/Tap";
 import { Text } from "@/components/Text";
 import { useCurrentMonth, useHousehold, useHouseholdState, useStoreQuery } from "@/data/HouseholdProvider";
-import { setPrefs, usePref, type ListView } from "@/data/prefs";
+import { getPref, setPrefs, usePref, type ListView } from "@/data/prefs";
 import { updateSession, useSession } from "@/data/session";
 import { setExpandOrigin, useOriginHidden } from "@/lib/expandOrigin";
 import { createStabilizer } from "@/lib/stableRows";
@@ -122,26 +123,24 @@ type HeaderRow = {
   /** By priority: one plain label over the whole list instead of a group chip. */
   priority?: boolean;
   /** The collapsible Checked section at the bottom (when checked items go to their own section). */
-  checkedSection?: { collapsed: boolean };
+  checkedSection?: boolean;
+  /** Filtered out by the search. Stays mounted so clearing the search is only a style change. */
+  hidden?: boolean;
 };
-/** `hidden`: a checked item while Checked is folded. It stays mounted so unfolding is only a style change. */
-type ItemRowData = { kind: "item"; key: string; item: Item; group?: Group; hidden?: boolean };
+/**
+ * `hidden`: filtered out by the search. `inChecked`: in the Checked section, which folds on the UI thread.
+ * Both stay mounted, so clearing the search or unfolding Checked is only a style change, not mounting rows.
+ */
+type ItemRowData = { kind: "item"; key: string; item: Item; group?: Group; hidden?: boolean; inChecked?: boolean };
 type Row = HeaderRow | ItemRowData;
 
-const buildRows = ({
-  view,
-  listView,
-  groupsById,
-  checkedCollapsed,
-}: {
-  view: MonthView;
-  listView: ListView;
-  groupsById: Map<string, Group>;
-  checkedCollapsed: boolean;
-}): Row[] => [...listRows({ view, listView, groupsById }), ...checkedRows({ view, groupsById, collapsed: checkedCollapsed })];
+const buildRows = ({ view, listView, groupsById }: { view: MonthView; listView: ListView; groupsById: Map<string, Group> }): Row[] => [
+  ...listRows({ view, listView, groupsById }),
+  ...checkedRows({ view, groupsById }),
+];
 
 /** The Checked section: one collapsible header after everything else, then the checked items with their group shown. */
-const checkedRows = ({ view, groupsById, collapsed }: { view: MonthView; groupsById: Map<string, Group>; collapsed: boolean }): Row[] => {
+const checkedRows = ({ view, groupsById }: { view: MonthView; groupsById: Map<string, Group> }): Row[] => {
   if (view.checked.length === 0) return [];
   const header: Row = {
     kind: "header",
@@ -149,12 +148,12 @@ const checkedRows = ({ view, groupsById, collapsed }: { view: MonthView; groupsB
     title: "Checked",
     remaining: view.checked.length,
     itemIds: view.checked.map((item) => item.id),
-    checkedSection: { collapsed },
+    checkedSection: true,
   };
   return [
     header,
     ...view.checked.map(
-      (item): Row => ({ kind: "item", key: item.id, item, group: item.groupId ? groupsById.get(item.groupId) : undefined, hidden: collapsed }),
+      (item): Row => ({ kind: "item", key: item.id, item, group: item.groupId ? groupsById.get(item.groupId) : undefined, inChecked: true }),
     ),
   ];
 };
@@ -270,21 +269,28 @@ const EmptyState = ({ searching }: { searching: boolean }) => {
   );
 };
 
-/** Group header: chip, items left (✓ when done), and a check-all / uncheck-all button. */
-const SectionHeader = ({
-  row,
-  onCheckAll,
-  onToggleChecked,
-}: {
-  row: HeaderRow;
-  onCheckAll?: (row: HeaderRow) => void;
-  onToggleChecked: () => void;
-}) => {
+/**
+ * Rows in Checked fold on the UI thread from a shared value, so folding or unfolding Checked doesn't
+ * re-render the list: only the header re-renders.
+ */
+const FoldableRow = ({ folded, hidden, children }: { folded?: SharedValue<boolean>; hidden: boolean; children: ReactNode }) => {
+  const foldStyle = useAnimatedStyle(() => ({ display: hidden || folded?.value ? "none" : "flex" }));
+  return <Animated.View style={foldStyle}>{children}</Animated.View>;
+};
+
+const FoldSync = ({ folded }: { folded: SharedValue<boolean> }) => {
+  const collapsed = usePref("checkedCollapsed");
+  useEffect(() => {
+    folded.set(collapsed);
+  }, [collapsed, folded]);
+  return null;
+};
+
+/** Reads the fold itself, so folding Checked re-renders this header and nothing else in the list. */
+const CheckedHeader = ({ row, onToggle }: { row: HeaderRow; onToggle: () => void }) => {
   const { colors } = useTheme();
-  const done = row.remaining === 0;
-  if (row.checkedSection) {
-    const { collapsed } = row.checkedSection;
-    return (
+  const collapsed = usePref("checkedCollapsed");
+  return (
       <View style={styles.headerInset}>
         <Tap
           unstable_pressDelay={PRESS_DELAY_MS}
@@ -293,7 +299,7 @@ const SectionHeader = ({
           accessibilityLabel={`Checked items, ${row.remaining}`}
           accessibilityHint={collapsed ? "Shows them" : "Hides them"}
           pressScale={0.99}
-          onPress={onToggleChecked}
+          onPress={onToggle}
           style={[styles.groupHeader, styles.priorityHeader]}
         >
           <View pointerEvents="none" style={[styles.headerLine, { backgroundColor: colors.line }]} />
@@ -307,7 +313,23 @@ const SectionHeader = ({
           <CheckedChevron open={!collapsed} />
         </Tap>
       </View>
-    );
+  );
+};
+
+/** Group header: chip, items left (✓ when done), and a check-all / uncheck-all button. */
+const SectionHeader = ({
+  row,
+  onCheckAll,
+  onToggleChecked,
+}: {
+  row: HeaderRow;
+  onCheckAll?: (row: HeaderRow) => void;
+  onToggleChecked: () => void;
+}) => {
+  const { colors } = useTheme();
+  const done = row.remaining === 0;
+  if (row.checkedSection) {
+    return <CheckedHeader row={row} onToggle={onToggleChecked} />;
   }
   if (row.priority) {
     return (
@@ -508,29 +530,44 @@ export default function ListScreen() {
   const updateSheet = useRef<SheetRef>(null);
   const listView = usePref("listView");
   const checkedItems = usePref("checkedItems");
-  const checkedCollapsed = usePref("checkedCollapsed");
+  // Checked folds on the UI thread (see FoldableRow); FoldSync keeps it in step if the pref changes elsewhere.
+  const folded = useSharedValue(getPref("checkedCollapsed"));
 
   const view = useStoreQuery(
-    (store) => buildMonthView({ store, month, search, checkedLast: checkedItems !== "stay", checkedApart: checkedItems === "section" }),
-    [month, search, checkedItems],
+    (store) => buildMonthView({ store, month, checkedLast: checkedItems !== "stay", checkedApart: checkedItems === "section" }),
+    [month, checkedItems],
+  );
+  const searching = search.trim() !== "";
+  const searchView = useStoreQuery(
+    (store) =>
+      searching
+        ? buildMonthView({ store, month, search, checkedLast: checkedItems !== "stay", checkedApart: checkedItems === "section" })
+        : undefined,
+    [month, search, searching, checkedItems],
   );
   const groups = useStoreQuery((store) => liveGroups({ store }), []);
   const groupsById = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups]);
-  const toggleChecked = useCallback(() => setPrefs({ checkedCollapsed: !checkedCollapsed }), [checkedCollapsed]);
+  const toggleChecked = useCallback(() => {
+    const next = !getPref("checkedCollapsed");
+    folded.set(next);
+    setPrefs({ checkedCollapsed: next });
+  }, [folded]);
   const months = useStoreQuery((store) => browsableMonths({ store, current }), [current]);
   // Hand memoized rows the same objects when nothing about them changed, so one check re-renders one row.
   const [stableItem] = useState(createStabilizer<Item>);
   const [stableGroup] = useState(createStabilizer<Group>);
-  const rows = useMemo(
-    () =>
-
-      buildRows({ view, listView, groupsById, checkedCollapsed }).map((row) =>
+  const rows = useMemo(() => {
+    const matches =
+      searchView && new Map(buildRows({ view: searchView, listView, groupsById }).map((row) => [row.key, row]));
+    return buildRows({ view, listView, groupsById })
+      .map((row): Row => (matches ? (matches.get(row.key) ?? { ...row, hidden: true }) : row))
+      .map((row) =>
         row.kind === "item"
           ? { ...row, item: stableItem(row.item.id, row.item), group: row.group && stableGroup(row.group.id, row.group) }
           : row,
-      ),
-    [checkedCollapsed, groupsById, listView, stableGroup, stableItem, view],
-  );
+      );
+  }, [groupsById, listView, searchView, stableGroup, stableItem, view]);
+  const nothingShown = rows.every((row) => row.hidden);
   const pendingSet = useMemo(() => new Set(pending), [pending]);
 
   const index = months.indexOf(month);
@@ -560,7 +597,7 @@ export default function ListScreen() {
   const syncNow = useCallback(
     async (from: "pull" | "pill") => {
       setSyncing(from);
-      await Promise.all([household.nudge(), new Promise((resolve) => setTimeout(resolve, MIN_SYNC_FEEDBACK_MS))]);
+      await Promise.all([household.nudge({ asked: true }), new Promise((resolve) => setTimeout(resolve, MIN_SYNC_FEEDBACK_MS))]);
       setSyncing(undefined);
     },
     [household],
@@ -675,9 +712,11 @@ export default function ListScreen() {
   const renderRow = useCallback(
     ({ item: row }: { item: Row }) =>
       row.kind === "header" ? (
-        <SectionHeader row={row} onCheckAll={reorderMode ? undefined : checkAll} onToggleChecked={toggleChecked} />
-      ) : (
         <View style={row.hidden && styles.folded}>
+          <SectionHeader row={row} onCheckAll={reorderMode ? undefined : checkAll} onToggleChecked={toggleChecked} />
+        </View>
+      ) : (
+        <FoldableRow folded={row.inChecked ? folded : undefined} hidden={row.hidden === true}>
           <DraggableItem
             item={row.item}
             group={row.group}
@@ -685,13 +724,14 @@ export default function ListScreen() {
             handlers={handlers}
             reorderMode={reorderMode}
           />
-        </View>
+        </FoldableRow>
       ),
-    [checkAll, handlers, pendingSet, reorderMode, toggleChecked],
+    [checkAll, folded, handlers, pendingSet, reorderMode, toggleChecked],
   );
 
   return (
     <Screen edges={["top"]}>
+      <FoldSync folded={folded} />
       <ScrollViewContainer
         contentContainerStyle={[styles.content, { paddingBottom: 120 + insets.bottom }]}
         keyboardShouldPersistTaps="handled"
@@ -735,7 +775,7 @@ export default function ListScreen() {
 
         <LayoutAnimationConfig skipEntering>
           <Animated.View key={month} entering={monthEntering(place.direction)} style={styles.rows}>
-            {rows.length === 0 ? <EmptyState searching={search.trim() !== ""} /> : null}
+            {nothingShown ? <EmptyState searching={searching} /> : null}
             <NestedReorderableList
               data={rows}
               // Lists are short: render every row in the first pass instead of

@@ -65,6 +65,9 @@ export const usePrefs = (): Prefs => useExternalStore(prefsStore);
 /** One pref. Re-renders only when that pref changes, not on every settings tap. */
 export const usePref = <K extends keyof Prefs>(key: K): Prefs[K] => useSyncExternalStore(prefsStore.subscribe, () => prefsStore.get()[key]);
 
+/** One pref, read once without subscribing (for event handlers). */
+export const getPref = <K extends keyof Prefs>(key: K): Prefs[K] => prefsStore.get()[key];
+
 export const setPrefs = (patch: Partial<Prefs>): void => {
   prefsStore.set((previous) => ({ ...previous, ...patch }));
   deviceStorage.set(KEY, JSON.stringify(prefsStore.get()));

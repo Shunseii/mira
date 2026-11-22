@@ -94,6 +94,13 @@ export default function AddItem() {
   const newItems = usePref("newItems");
   const addLabel = `Add to ${monthName(month)}`;
   const stickyOffset = { closed: 0, opened: insets.bottom };
+  // The page is still invisible as the morph leaves the +, so the fields below the name mount a frame
+  // later: the morph starts sooner instead of waiting for the whole form.
+  const [restReady, setRestReady] = useState(false);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setRestReady(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   // The name field autoFocuses so the keyboard rises while the screen grows out of the + button. Android
   // sometimes drops that first keyboard request while the new screen's window is still taking focus, so ask
@@ -117,7 +124,7 @@ export default function AddItem() {
     };
   }, []);
 
-  const chips = useStoreQuery((store) => usuals({ store, month, query: name, limit: 8 }), [month, name]);
+  const chips = useStoreQuery((store) => (restReady ? usuals({ store, month, query: name, limit: 8 }) : []), [month, name, restReady]);
   const unitHints = useStoreQuery((store) => suggestUnits({ store, name }), [name]);
   const remembered = useStoreQuery((store) => lastItemNamed({ store, name }), [name]);
   const group = useStoreQuery((store) => (groupId ? readGroup({ store, id: groupId }) : undefined), [groupId]);
@@ -229,7 +236,7 @@ export default function AddItem() {
                 onSubmitEditing={() => add({ andClose: false })}
               />
 
-              {chips.length > 0 ? (
+              {restReady && chips.length > 0 ? (
                 <Animated.View entering={FadeIn} layout={LinearTransition} style={styles.usuals}>
                   <Text variant="label" color="ink2">
                     Your usuals
@@ -247,23 +254,25 @@ export default function AddItem() {
                 </Animated.View>
               ) : null}
 
-              <ItemFields
-                value={{ groupId, qty, unit, month, note }}
-                onChange={(patch) => {
-                  if ("groupId" in patch) {
-                    setGroupId(patch.groupId);
-                    setGroupTouched(true);
-                  }
-                  if ("qty" in patch) setQty(patch.qty);
-                  if ("unit" in patch) {
-                    setUnit(patch.unit);
-                    setUnitTouched(true);
-                  }
-                  if (patch.month) setMonth(patch.month);
-                  if (patch.note !== undefined) setNote(patch.note);
-                }}
-                unitSuggestions={unitHints.suggestions}
-              />
+              {restReady ? (
+                <ItemFields
+                  value={{ groupId, qty, unit, month, note }}
+                  onChange={(patch) => {
+                    if ("groupId" in patch) {
+                      setGroupId(patch.groupId);
+                      setGroupTouched(true);
+                    }
+                    if ("qty" in patch) setQty(patch.qty);
+                    if ("unit" in patch) {
+                      setUnit(patch.unit);
+                      setUnitTouched(true);
+                    }
+                    if (patch.month) setMonth(patch.month);
+                    if (patch.note !== undefined) setNote(patch.note);
+                  }}
+                  unitSuggestions={unitHints.suggestions}
+                />
+              ) : null}
             </KeyboardAwareScrollView>
 
             {/* Its own layer riding the keyboard just above the footer: as the footer's child it would sit

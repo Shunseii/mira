@@ -20,7 +20,7 @@ import { Text } from "./Text";
 import { Wordmark } from "./Wordmark";
 import { UpdatePill } from "./UpdateReady";
 
-/** How long "Synced" stays up after a sync sends this phone's changes. */
+/** How long "Synced" stays up after coming back online. */
 const SYNCED_MS = 2000;
 const SPIN_MS = 900;
 /** One pill state hands over to the next: the old one is gone before the new one shows, so they never overlap. */
@@ -58,8 +58,8 @@ type SyncPillState = "unauthorized" | "offline" | "syncing" | "synced";
 
 /** What the header says about sync, if anything: a problem, a sync you asked for, or a brief "Synced". */
 const useSyncPillState = ({ syncing }: { syncing: boolean }): SyncPillState | undefined => {
-  const { status, pending, sentAt } = useHouseholdState();
-  const justSent = useStillRecent({ at: sentAt, ms: SYNCED_MS });
+  const { status, pending, reconnectedAt } = useHouseholdState();
+  const justSent = useStillRecent({ at: reconnectedAt, ms: SYNCED_MS });
   const [last, setLast] = useState<SyncPillState>();
   const next = ((): SyncPillState | undefined => {
     if (status === "unauthorized") return "unauthorized";
