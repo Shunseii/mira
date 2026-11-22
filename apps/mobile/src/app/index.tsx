@@ -19,8 +19,13 @@ import { router, useFocusEffect } from "expo-router";
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { BackHandler, RefreshControl, StyleSheet, TextInput, View } from "react-native";
 import Animated, {
+  type AnimatedRef,
+  Easing,
   FadeIn,
   LayoutAnimationConfig,
+  measure,
+  useAnimatedReaction,
+  useAnimatedRef,
   useAnimatedStyle,
   useSharedValue,
   type SharedValue,
@@ -271,20 +276,66 @@ const EmptyState = ({ searching }: { searching: boolean }) => {
   );
 };
 
+/** About as long as the rows take to spring open (ROW_LAYOUT). */
+const FOLD_MS = 250;
+
+/** How far Checked has folded: 0 open, 1 folded away. */
+type Fold = SharedValue<number>;
+
+const foldTo = ({ fold, folded }: { fold: Fold; folded: boolean }) => {
+  fold.set(folded ? withTiming(1, { duration: FOLD_MS, easing: Easing.out(Easing.cubic) }) : 0);
+};
+
 /**
  * Rows in Checked fold on the UI thread from a shared value, so folding or unfolding Checked doesn't
  * re-render the list: only the header re-renders.
+ *
+ * Unfolding shows the rows at once and they spring down out of the header (ROW_LAYOUT). Folding
+ * mirrors it: each row slides up under the header as it fades, and only then leaves the layout.
  */
-const FoldableRow = ({ folded, hidden, children }: { folded?: SharedValue<boolean>; hidden: boolean; children: ReactNode }) => {
-  const foldStyle = useAnimatedStyle(() => ({ display: hidden || folded?.value ? "none" : "flex" }));
-  return <Animated.View style={foldStyle}>{children}</Animated.View>;
+const FoldableRow = ({
+  fold,
+  anchor,
+  hidden,
+  children,
+}: {
+  fold?: Fold;
+  anchor: AnimatedRef<Animated.View>;
+  hidden: boolean;
+  children: ReactNode;
+}) => {
+  const row = useAnimatedRef<Animated.View>();
+  // How far below the Checked header this row sat when folding began.
+  const distance = useSharedValue(0);
+  useAnimatedReaction(
+    () => (fold?.value ?? 0) > 0,
+    (folding, wasFolding) => {
+      if (!folding || wasFolding !== false) return;
+      const self = measure(row);
+      const header = measure(anchor);
+      distance.set(self && header ? Math.max(0, self.pageY - (header.pageY + header.height)) : 0);
+    },
+  );
+  const foldStyle = useAnimatedStyle(() => {
+    const progress = fold?.value ?? 0;
+    return {
+      display: hidden || progress >= 1 ? "none" : "flex",
+      opacity: 1 - progress,
+      transform: [{ translateY: -progress * distance.value }],
+    };
+  });
+  return (
+    <Animated.View ref={row} style={foldStyle}>
+      {children}
+    </Animated.View>
+  );
 };
 
-const FoldSync = ({ folded }: { folded: SharedValue<boolean> }) => {
+const FoldSync = ({ fold }: { fold: Fold }) => {
   const collapsed = usePref("checkedCollapsed");
   useEffect(() => {
-    folded.set(collapsed);
-  }, [collapsed, folded]);
+    if ((fold.get() > 0) !== collapsed) foldTo({ fold, folded: collapsed });
+  }, [collapsed, fold]);
   return null;
 };
 
@@ -533,7 +584,9 @@ export default function ListScreen() {
   const listView = usePref("listView");
   const checkedItems = usePref("checkedItems");
   // Checked folds on the UI thread (see FoldableRow); FoldSync keeps it in step if the pref changes elsewhere.
-  const folded = useSharedValue(getPref("checkedCollapsed"));
+  const fold = useSharedValue(getPref("checkedCollapsed") ? 1 : 0);
+  // The Checked header, which folding rows slide up under.
+  const foldAnchor = useAnimatedRef<Animated.View>();
 
   const view = useStoreQuery(
     (store) => buildMonthView({ store, month, checkedLast: checkedItems !== "stay", checkedApart: checkedItems === "section" }),
@@ -551,9 +604,9 @@ export default function ListScreen() {
   const groupsById = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups]);
   const toggleChecked = useCallback(() => {
     const next = !getPref("checkedCollapsed");
-    folded.set(next);
+    foldTo({ fold, folded: next });
     setPrefs({ checkedCollapsed: next });
-  }, [folded]);
+  }, [fold]);
   const months = useStoreQuery((store) => browsableMonths({ store, current }), [current]);
   // Hand memoized rows the same objects when nothing about them changed, so one check re-renders one row.
   const [stableItem] = useState(createStabilizer<Item>);
@@ -714,11 +767,11 @@ export default function ListScreen() {
   const renderRow = useCallback(
     ({ item: row }: { item: Row }) =>
       row.kind === "header" ? (
-        <View style={row.hidden && styles.folded}>
+        <Animated.View ref={row.checkedSection ? foldAnchor : undefined} style={row.hidden && styles.folded}>
           <SectionHeader row={row} onCheckAll={reorderMode ? undefined : checkAll} onToggleChecked={toggleChecked} />
-        </View>
+        </Animated.View>
       ) : (
-        <FoldableRow folded={row.inChecked ? folded : undefined} hidden={row.hidden === true}>
+        <FoldableRow fold={row.inChecked ? fold : undefined} anchor={foldAnchor} hidden={row.hidden === true}>
           <DraggableItem
             item={row.item}
             group={row.group}
@@ -728,12 +781,12 @@ export default function ListScreen() {
           />
         </FoldableRow>
       ),
-    [checkAll, folded, handlers, pendingSet, reorderMode, toggleChecked],
+    [checkAll, fold, foldAnchor, handlers, pendingSet, reorderMode, toggleChecked],
   );
 
   return (
     <Screen edges={["top"]}>
-      <FoldSync folded={folded} />
+      <FoldSync fold={fold} />
       <ScrollViewContainer
         contentContainerStyle={[styles.content, { paddingBottom: 120 + insets.bottom }]}
         keyboardShouldPersistTaps="handled"
