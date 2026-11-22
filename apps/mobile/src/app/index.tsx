@@ -20,8 +20,9 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode
 import { BackHandler, RefreshControl, StyleSheet, TextInput, View } from "react-native";
 import Animated, {
   type AnimatedRef,
-  Easing,
+  Extrapolation,
   FadeIn,
+  interpolate,
   LayoutAnimationConfig,
   measure,
   useAnimatedReaction,
@@ -276,39 +277,53 @@ const EmptyState = ({ searching }: { searching: boolean }) => {
   );
 };
 
-/** About as long as the rows take to spring open (ROW_LAYOUT). */
-const FOLD_MS = 250;
-
 /** How far Checked has folded: 0 open, 1 folded away. */
 type Fold = SharedValue<number>;
 
+/** Rows fade only at the very end of folding, once they're tucked under the header. */
+const FOLD_FADE = [0.75, 1];
+
+/** Folding runs the rows' opening spring (ROW_LAYOUT) in reverse. */
 const foldTo = ({ fold, folded }: { fold: Fold; folded: boolean }) => {
-  fold.set(folded ? withTiming(1, { duration: FOLD_MS, easing: Easing.out(Easing.cubic) }) : 0);
+  fold.set(folded ? withSpring(1, { ...SPRING_SNAPPY, overshootClamping: true }) : 0);
 };
 
 /**
- * Rows in Checked fold on the UI thread from a shared value, so folding or unfolding Checked doesn't
- * re-render the list: only the header re-renders.
- *
- * Unfolding shows the rows at once and they spring down out of the header (ROW_LAYOUT). Folding
- * mirrors it: each row slides up under the header as it fades, and only then leaves the layout.
+ * Folded rows are laid out once, invisibly, this long after launch, so the first unfold doesn't
+ * have to measure every row before it can start, without holding up the first frames.
  */
-const FoldableRow = ({
+const WARM_FOLDED_AFTER_MS = 1000;
+/** Long enough for that layout pass to land. */
+const WARM_FOLDED_FOR_MS = 100;
+
+/**
+ * A row in Checked. It folds on the UI thread from a shared value, so folding or unfolding Checked
+ * doesn't re-render the list.
+ *
+ * Unfolding shows the rows at once and they spring down out of the header (ROW_LAYOUT). Folding is
+ * the same in reverse: each row springs up under the header, then leaves the flow.
+ *
+ * While `warming`, folded rows are laid out out of the flow and invisible (see WARM_FOLDED_AFTER_MS).
+ */
+const CheckedRow = ({
   fold,
+  warming,
   anchor,
   hidden,
   children,
 }: {
-  fold?: Fold;
+  fold: Fold;
+  warming: SharedValue<boolean>;
   anchor: AnimatedRef<Animated.View>;
   hidden: boolean;
   children: ReactNode;
 }) => {
+  const collapsed = usePref("checkedCollapsed");
   const row = useAnimatedRef<Animated.View>();
   // How far below the Checked header this row sat when folding began.
   const distance = useSharedValue(0);
   useAnimatedReaction(
-    () => (fold?.value ?? 0) > 0,
+    () => fold.value > 0,
     (folding, wasFolding) => {
       if (!folding || wasFolding !== false) return;
       const self = measure(row);
@@ -317,15 +332,28 @@ const FoldableRow = ({
     },
   );
   const foldStyle = useAnimatedStyle(() => {
-    const progress = fold?.value ?? 0;
+    const progress = fold.value;
+    if (!hidden && progress >= 1 && warming.value) {
+      return { display: "flex", position: "absolute", left: 0, right: 0, top: 0, opacity: 0, transform: [{ translateY: 0 }] };
+    }
+    if (hidden || progress >= 1) return { display: "none", position: "relative", opacity: 1, transform: [{ translateY: 0 }] };
     return {
-      display: hidden || progress >= 1 ? "none" : "flex",
-      opacity: 1 - progress,
+      display: "flex",
+      position: "relative",
+      // Gone by the time the row leaves the flow: as its cell then springs shut, the list can briefly draw the last row on top.
+      opacity: interpolate(progress, FOLD_FADE, [1, 0], Extrapolation.CLAMP),
       transform: [{ translateY: -progress * distance.value }],
     };
   });
   return (
-    <Animated.View ref={row} style={foldStyle}>
+    <Animated.View
+      ref={row}
+      style={foldStyle}
+      // Keeps taps and screen readers off folded rows while they're laid out to warm up.
+      pointerEvents={collapsed ? "none" : "auto"}
+      importantForAccessibility={collapsed ? "no-hide-descendants" : "auto"}
+      accessibilityElementsHidden={collapsed}
+    >
       {children}
     </Animated.View>
   );
@@ -583,10 +611,18 @@ export default function ListScreen() {
   const updateSheet = useRef<SheetRef>(null);
   const listView = usePref("listView");
   const checkedItems = usePref("checkedItems");
-  // Checked folds on the UI thread (see FoldableRow); FoldSync keeps it in step if the pref changes elsewhere.
+  // Checked folds on the UI thread (see CheckedRow); FoldSync keeps it in step if the pref changes elsewhere.
   const fold = useSharedValue(getPref("checkedCollapsed") ? 1 : 0);
   // The Checked header, which folding rows slide up under.
   const foldAnchor = useAnimatedRef<Animated.View>();
+  const foldWarming = useSharedValue(false);
+  useEffect(() => {
+    const timers = [
+      setTimeout(() => foldWarming.set(true), WARM_FOLDED_AFTER_MS),
+      setTimeout(() => foldWarming.set(false), WARM_FOLDED_AFTER_MS + WARM_FOLDED_FOR_MS),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, [foldWarming]);
 
   const view = useStoreQuery(
     (store) => buildMonthView({ store, month, checkedLast: checkedItems !== "stay", checkedApart: checkedItems === "section" }),
@@ -765,23 +801,32 @@ export default function ListScreen() {
   );
 
   const renderRow = useCallback(
-    ({ item: row }: { item: Row }) =>
-      row.kind === "header" ? (
-        <Animated.View ref={row.checkedSection ? foldAnchor : undefined} style={row.hidden && styles.folded}>
-          <SectionHeader row={row} onCheckAll={reorderMode ? undefined : checkAll} onToggleChecked={toggleChecked} />
-        </Animated.View>
+    ({ item: row }: { item: Row }) => {
+      if (row.kind === "header") {
+        return (
+          <Animated.View ref={row.checkedSection ? foldAnchor : undefined} style={row.hidden && styles.folded}>
+            <SectionHeader row={row} onCheckAll={reorderMode ? undefined : checkAll} onToggleChecked={toggleChecked} />
+          </Animated.View>
+        );
+      }
+      const item = (
+        <DraggableItem
+          item={row.item}
+          group={row.group}
+          pending={pendingSet.has(`items/${row.item.id}`)}
+          handlers={handlers}
+          reorderMode={reorderMode}
+        />
+      );
+      return row.inChecked ? (
+        <CheckedRow fold={fold} warming={foldWarming} anchor={foldAnchor} hidden={row.hidden === true}>
+          {item}
+        </CheckedRow>
       ) : (
-        <FoldableRow fold={row.inChecked ? fold : undefined} anchor={foldAnchor} hidden={row.hidden === true}>
-          <DraggableItem
-            item={row.item}
-            group={row.group}
-            pending={pendingSet.has(`items/${row.item.id}`)}
-            handlers={handlers}
-            reorderMode={reorderMode}
-          />
-        </FoldableRow>
-      ),
-    [checkAll, fold, foldAnchor, handlers, pendingSet, reorderMode, toggleChecked],
+        <View style={row.hidden && styles.folded}>{item}</View>
+      );
+    },
+    [checkAll, fold, foldAnchor, foldWarming, handlers, pendingSet, reorderMode, toggleChecked],
   );
 
   return (
