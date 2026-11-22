@@ -207,10 +207,12 @@ export const startHousehold = async ({
       });
       await created.startSync();
       attempt = 0;
-      deviceStorage.set(syncedKey, "1");
-      patch({ hasSynced: true });
+      if (!state.get().hasSynced) {
+        deviceStorage.set(syncedKey, "1");
+        patch({ hasSynced: true });
+      }
       setStatus("online");
-      setPending([]);
+      if (state.get().pending.length > 0) setPending([]);
       housekeeping();
     } catch (error) {
       await dropConnection();
@@ -260,8 +262,13 @@ export const startHousehold = async ({
     openSocketRef?.close();
   };
 
-  networkDown = (await getNetworkStateAsync().catch(() => undefined))?.isConnected === false;
-  persister = await startLocalPersistence({ store, dbName });
+  const [network] = await Promise.all([
+    getNetworkStateAsync().catch(() => undefined),
+    startLocalPersistence({ store, dbName }).then((started) => {
+      persister = started;
+    }),
+  ]);
+  networkDown = network?.isConnected === false;
   patch({ ready: true });
   housekeeping();
   void connect();
@@ -271,8 +278,8 @@ export const startHousehold = async ({
     housekeeping();
     void nudge();
   });
-  const network = addNetworkStateListener((network) => {
-    networkDown = network.isConnected === false;
+  const networkListener = addNetworkStateListener((change) => {
+    networkDown = change.isConnected === false;
     if (networkDown) void goneOffline();
     else void nudge();
   });
@@ -290,7 +297,7 @@ export const startHousehold = async ({
         deviceStorage.set(pendingKey, JSON.stringify(state.get().pending));
       }
       appState.remove();
-      network.remove();
+      networkListener.remove();
       const openSocketRef = socket;
       await dropConnection();
       openSocketRef?.close();

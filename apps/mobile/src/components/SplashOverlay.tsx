@@ -33,7 +33,7 @@ const GLIDE_ENABLED = false;
 const TARGET_WAIT_MS = 600;
 /** If the icon hasn't reported loading by then, hand over anyway. */
 const ICON_WAIT_MS = 300;
-const FADE_MS = 250;
+const FADE_MS = 150;
 /** Counts as landed from here, rather than waiting out the spring's tail. */
 const LANDED_AT = 0.995;
 /** The splash's letterforms hand over to the header font's over this stretch of the glide, once it's nearly there. */

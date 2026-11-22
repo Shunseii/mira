@@ -1,5 +1,5 @@
 import { formatQuantity, isGroupIcon, type Group, type Item } from "@mira/shared";
-import { memo, useEffect, type ReactNode } from "react";
+import { memo, useEffect, useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, { LayoutAnimationConfig, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 import { usePref } from "@/data/prefs";
@@ -21,13 +21,20 @@ const CHECK_FADE_MS = 120;
 const PRESS_IN_MS = 90;
 const PRESS_OUT_MS = 240;
 
-const PressHighlight = ({ pressed, color }: { pressed: boolean; color: string }) => {
+const PressFade = ({ pressed, color }: { pressed: boolean; color: string }) => {
   const opacity = useSharedValue(0);
   useEffect(() => {
     opacity.set(withTiming(pressed ? 1 : 0, { duration: pressed ? PRESS_IN_MS : PRESS_OUT_MS }));
   }, [pressed, opacity]);
   const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
   return <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: color }, style]} />;
+};
+
+/** Mounted on a row's first press, not with every row: most rows on screen are never pressed. */
+const PressHighlight = ({ pressed, color }: { pressed: boolean; color: string }) => {
+  const [used, setUsed] = useState(pressed);
+  if (pressed && !used) setUsed(true);
+  return used ? <PressFade pressed={pressed} color={color} /> : null;
 };
 
 /**

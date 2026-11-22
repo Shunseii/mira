@@ -63,6 +63,8 @@ import { FONTS, SEPARATOR_HEIGHT } from "@/theme/tokens";
 /** Just after a row's hold fires (HOLD_MS), so the row is picked up before the pan takes the touch. */
 const PAN_AFTER_HOLD_MS = HOLD_MS + 50;
 const FAB_SIZE = 64;
+/** Comfortably more rows than fit on a phone screen under the header. */
+const INITIAL_ROWS = 16;
 const SEARCH_HEIGHT = 44;
 const SEARCH_RADIUS = 14;
 
@@ -778,9 +780,9 @@ export default function ListScreen() {
             {nothingShown ? <EmptyState searching={searching} /> : null}
             <NestedReorderableList
               data={rows}
-              // Lists are short: render every row in the first pass instead of
-              // FlatList's default batches, so a month appears complete at once.
-              initialNumToRender={Math.max(rows.length, 20)}
+              // The first pass renders about a screenful so the list shows sooner (at launch, every
+              // extra row holds up the first frame); the rest render in one batch right after.
+              initialNumToRender={INITIAL_ROWS}
               maxToRenderPerBatch={100}
               windowSize={41}
               keyExtractor={(row) => row.key}
