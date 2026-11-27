@@ -1,0 +1,289 @@
+{
+  "$schema": "https://lamsa.dev/schema/v1.json",
+  "nodes": {
+    "1FjTdKkD": {
+      "index": "a0",
+      "name": "Screen",
+      "parentId": "hZDQ1put",
+      "src": "docs/screenshots/dark.png",
+      "style": {
+        "border-radius": "34px",
+        "height": "100%",
+        "object-fit": "cover",
+        "width": "100%"
+      },
+      "type": "image"
+    },
+    "6TNM8w85": {
+      "index": "a0",
+      "name": "Screen",
+      "parentId": "QPxh7Ynm",
+      "src": "docs/screenshots/add.png",
+      "style": {
+        "border-radius": "34px",
+        "height": "100%",
+        "object-fit": "cover",
+        "width": "100%"
+      },
+      "type": "image"
+    },
+    "76Cq9Pub": {
+      "index": "a1",
+      "name": "Pill",
+      "parentId": "HmvVSY0O",
+      "style": {
+        "align-items": "center",
+        "background": "{color.bg}",
+        "border": "1px solid {color.line}",
+        "border-radius": "18px",
+        "display": "flex",
+        "height": "36px",
+        "padding": "0px 16px"
+      },
+      "type": "frame"
+    },
+    "AbmZOpvc": {
+      "index": "a0",
+      "name": "Pill",
+      "parentId": "HmvVSY0O",
+      "style": {
+        "align-items": "center",
+        "background": "{color.bg}",
+        "border": "1px solid {color.line}",
+        "border-radius": "18px",
+        "display": "flex",
+        "height": "36px",
+        "padding": "0px 16px"
+      },
+      "type": "frame"
+    },
+    "GjTjjwSm": {
+      "content": "The household grocery list that works\noffline and syncs for everyone.",
+      "index": "a1",
+      "name": "Tagline",
+      "parentId": "vH7nCAPH",
+      "style": {
+        "color": "{color.ink}",
+        "font-family": "{font.display}",
+        "font-size": "28px",
+        "font-weight": "500",
+        "line-height": "38px"
+      },
+      "type": "text"
+    },
+    "HmvVSY0O": {
+      "index": "a2",
+      "name": "Pills",
+      "parentId": "vH7nCAPH",
+      "style": {
+        "display": "flex",
+        "flex-direction": "row",
+        "flex-wrap": "wrap",
+        "gap": "10px",
+        "padding": "8px 0px 0px 0px"
+      },
+      "type": "frame"
+    },
+    "QPxh7Ynm": {
+      "index": "a2",
+      "name": "Phone Add",
+      "parentId": "lAf3L8h7",
+      "style": {
+        "background": "#1A1714",
+        "border-radius": "44px",
+        "box-shadow": "0 30px 60px -12px {color.shadow-strong}, 0 12px 24px -8px {color.shadow}",
+        "display": "flex",
+        "height": 478,
+        "left": 640,
+        "padding": "10px",
+        "position": "absolute",
+        "rotate": "-7deg",
+        "top": 118,
+        "width": 224,
+        "z-index": 2
+      },
+      "type": "frame"
+    },
+    "Qdf3KRct": {
+      "index": "a0",
+      "name": "Screen",
+      "parentId": "tIW8XKm6",
+      "src": "docs/screenshots/list.png",
+      "style": {
+        "border-radius": "34px",
+        "height": "100%",
+        "object-fit": "cover",
+        "width": "100%"
+      },
+      "type": "image"
+    },
+    "XUzDEC38": {
+      "index": "a2",
+      "name": "Pill",
+      "parentId": "HmvVSY0O",
+      "style": {
+        "align-items": "center",
+        "background": "{color.bg}",
+        "border": "1px solid {color.line}",
+        "border-radius": "18px",
+        "display": "flex",
+        "height": "36px",
+        "padding": "0px 16px"
+      },
+      "type": "frame"
+    },
+    "cunlMY7W": {
+      "index": "a0",
+      "name": "Brand",
+      "parentId": "vH7nCAPH",
+      "style": {
+        "align-items": "baseline",
+        "display": "flex",
+        "flex-direction": "row",
+        "gap": "18px"
+      },
+      "type": "frame"
+    },
+    "dmuUVqnO": {
+      "content": "Offline-first",
+      "index": "a0",
+      "name": "Pill Text",
+      "parentId": "AbmZOpvc",
+      "style": {
+        "color": "{color.ink}",
+        "font-family": "{font.body}",
+        "font-size": "15px",
+        "font-weight": "600",
+        "white-space": "pre"
+      },
+      "type": "text"
+    },
+    "hZDQ1put": {
+      "index": "a1",
+      "name": "Phone Dark",
+      "parentId": "lAf3L8h7",
+      "style": {
+        "background": "#1A1714",
+        "border-radius": "44px",
+        "box-shadow": "0 30px 60px -12px {color.shadow-strong}, 0 12px 24px -8px {color.shadow}",
+        "display": "flex",
+        "height": 478,
+        "left": 1020,
+        "padding": "10px",
+        "position": "absolute",
+        "rotate": "8deg",
+        "top": 110,
+        "width": 224,
+        "z-index": 1
+      },
+      "type": "frame"
+    },
+    "lAf3L8h7": {
+      "index": "a0",
+      "name": "README Banner",
+      "style": {
+        "align-items": "center",
+        "background": "radial-gradient(120% 140% at 85% 30%, {color.accent-soft} 0%, {color.bg} 60%)",
+        "display": "flex",
+        "height": 600,
+        "overflow": "hidden",
+        "padding": "0px 72px",
+        "position": "relative",
+        "width": 1280
+      },
+      "type": "frame",
+      "x": 0,
+      "y": 0
+    },
+    "oZroeqKI": {
+      "content": "Self-hosted",
+      "index": "a0",
+      "name": "Pill Text",
+      "parentId": "XUzDEC38",
+      "style": {
+        "color": "{color.ink}",
+        "font-family": "{font.body}",
+        "font-size": "15px",
+        "font-weight": "600",
+        "white-space": "pre"
+      },
+      "type": "text"
+    },
+    "tFSya1ia": {
+      "content": "Mira",
+      "index": "a1",
+      "name": "Name",
+      "parentId": "cunlMY7W",
+      "style": {
+        "color": "{color.ink}",
+        "font-family": "{font.display}",
+        "font-size": "56px",
+        "font-weight": "600",
+        "line-height": "64px"
+      },
+      "type": "text"
+    },
+    "tIW8XKm6": {
+      "index": "a3",
+      "name": "Phone List",
+      "parentId": "lAf3L8h7",
+      "style": {
+        "background": "#1A1714",
+        "border-radius": "44px",
+        "box-shadow": "0 30px 60px -12px {color.shadow-strong}, 0 12px 24px -8px {color.shadow}",
+        "display": "flex",
+        "height": 541,
+        "left": 822,
+        "padding": "10px",
+        "position": "absolute",
+        "rotate": "0deg",
+        "top": 52,
+        "width": 252,
+        "z-index": 3
+      },
+      "type": "frame"
+    },
+    "tRUizSnG": {
+      "content": "ميرة",
+      "index": "a0",
+      "name": "Wordmark",
+      "parentId": "cunlMY7W",
+      "style": {
+        "color": "{color.accent}",
+        "font-family": "Amiri",
+        "font-size": "96px",
+        "font-weight": "700",
+        "line-height": "120px"
+      },
+      "type": "text"
+    },
+    "vH7nCAPH": {
+      "index": "a0",
+      "name": "Copy",
+      "parentId": "lAf3L8h7",
+      "style": {
+        "display": "flex",
+        "flex-direction": "column",
+        "gap": "18px",
+        "width": "600px",
+        "z-index": 5
+      },
+      "type": "frame"
+    },
+    "zxuJuDmw": {
+      "content": "Shared live",
+      "index": "a0",
+      "name": "Pill Text",
+      "parentId": "76Cq9Pub",
+      "style": {
+        "color": "{color.ink}",
+        "font-family": "{font.body}",
+        "font-size": "15px",
+        "font-weight": "600",
+        "white-space": "pre"
+      },
+      "type": "text"
+    }
+  },
+  "version": 1
+}
