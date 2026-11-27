@@ -8,11 +8,11 @@ import { Button } from "@/components/Button";
 import { ColorRow, CustomColorSheet, type Appearance } from "@/components/ColorPicker";
 import { GroupTintBadge, useGroupTone } from "@/components/GroupBadge";
 import { GroupIconPicker } from "@/components/GroupIconPicker";
-import { Icon } from "@/components/Icon";
 import { NavBar, NavTitle, useNavScroll } from "@/components/NavBar";
+import { ICON_WASH, IconTap } from "@/components/PressWash";
 import { Screen } from "@/components/Screen";
 import type { SheetRef } from "@/components/Sheet";
-import { Tap, haptic } from "@/components/Tap";
+import { haptic } from "@/components/Tap";
 import { Text } from "@/components/Text";
 import { useHousehold, useStoreQuery } from "@/data/HouseholdProvider";
 import { goBack } from "@/lib/navigation";
@@ -94,9 +94,16 @@ export default function EditGroup() {
         scrollY={scrollY}
         right={
           isNew ? null : (
-            <Tap accessibilityRole="button" accessibilityLabel="Delete group" onPress={remove} style={styles.trash}>
-              <Icon name="trash-2" size={20} color={colors.ink2} />
-            </Tap>
+            <IconTap
+              accessibilityRole="button"
+              accessibilityLabel="Delete group"
+              onPress={remove}
+              icon="trash-2"
+              iconSize={20}
+              color={colors.ink2}
+              wash={ICON_WASH}
+              style={styles.trash}
+            />
           )
         }
       />

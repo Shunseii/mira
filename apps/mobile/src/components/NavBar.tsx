@@ -13,12 +13,15 @@ import { goBack } from "@/lib/navigation";
 import { useTheme } from "@/theme/ThemeProvider";
 import { TAP } from "@/theme/tokens";
 import { Icon } from "./Icon";
+import { PressWash, usePressWash, type PressWashShape } from "./PressWash";
 import { Tap } from "./Tap";
 import { Text } from "./Text";
 
 /** How far the large title scrolls up before its name moves into the bar (about the title's own height). */
 const COLLAPSE_AT = 34;
 const TITLE_FADE_MS = 150;
+/** A pill around the chevron and label: a little past the chevron's left edge, through the link's right padding. */
+const BACK_WASH: PressWashShape = { kind: "pill", inset: { top: 4, right: 0, bottom: 4, left: -6 } };
 
 /** Tracks a screen's scroll on the UI thread so the bar can collapse its large title without re-rendering. */
 export const useNavScroll = () => {
@@ -47,6 +50,7 @@ export const NavBar = ({
   right?: ReactNode;
 }) => {
   const { colors } = useTheme();
+  const backPress = usePressWash();
   const collapsed = useDerivedValue(() => (scrollY ? scrollY.get() > COLLAPSE_AT : false));
   // Timed, not a spring: it's a fade. Reanimated's default ReduceMotion.System makes it jump when asked.
   const titleStyle = useAnimatedStyle(() => ({ opacity: withTiming(collapsed.get() ? 1 : 0, { duration: TITLE_FADE_MS }) }));
@@ -58,9 +62,13 @@ export const NavBar = ({
         accessibilityRole="button"
         accessibilityLabel={`Back to ${back.label}`}
         feedback={back.feedback ?? "none"}
+        pressScale={1}
+        onPressIn={backPress.pressIn}
+        onPressOut={backPress.pressOut}
         onPress={() => goBack(back.fallback)}
         style={styles.back}
       >
+        <PressWash shape={BACK_WASH} press={backPress} />
         <Icon name="chevron-left" size={22} color={colors.accent} />
         <Text variant="bodyStrong" color="accent" numberOfLines={1} style={styles.backLabel}>
           {back.label}

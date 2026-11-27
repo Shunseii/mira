@@ -42,6 +42,7 @@ import {
   useReorderableDrag,
   type ReorderableListReorderEvent,
 } from "react-native-reorderable-list";
+import { Gesture } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 import { ArrangeListSheet } from "@/components/ArrangeListSheet";
@@ -54,6 +55,7 @@ import { MonthSheet } from "@/components/MonthSheet";
 import { staggerDelay, type RowTint } from "@/components/NewItemTint";
 import { UpdateSheet } from "@/components/UpdateReady";
 import type { SheetRef } from "@/components/Sheet";
+import { HeldTouchGestureContext, IconTap, SMALL_ICON_WASH } from "@/components/PressWash";
 import { Screen } from "@/components/Screen";
 import { SwipeToDelete } from "@/components/SwipeToDelete";
 import { UNDO_MS, UndoSnackbar } from "@/components/UndoSnackbar";
@@ -278,15 +280,30 @@ const SearchBar = ({ month, value, onChange, onView }: { month: MonthKey; value:
           style={[styles.searchInput, { color: colors.ink }]}
         />
         {value ? (
-          <Tap unstable_pressDelay={PRESS_DELAY_MS} accessibilityLabel="Clear search" onPress={() => onChange("")} style={styles.clear}>
-            <Icon name="x" size={18} color={colors.ink2} />
-          </Tap>
+          <IconTap
+            unstable_pressDelay={PRESS_DELAY_MS}
+            accessibilityLabel="Clear search"
+            onPress={() => onChange("")}
+            icon="x"
+            iconSize={18}
+            color={colors.ink2}
+            wash={SMALL_ICON_WASH}
+            style={styles.clear}
+          />
         ) : null}
       </View>
-      <Tap unstable_pressDelay={PRESS_DELAY_MS} accessibilityRole="button" accessibilityLabel="Arrange list" pressScale={0.92} onPress={onView} style={styles.viewButton}>
-        <SquircleFill size={{ width: SEARCH_HEIGHT, height: SEARCH_HEIGHT }} radius={SEARCH_RADIUS} color={colors.surface2} />
-        <Icon name="list-ordered" size={20} color={colors.ink2} />
-      </Tap>
+      <IconTap
+        unstable_pressDelay={PRESS_DELAY_MS}
+        accessibilityRole="button"
+        accessibilityLabel="Arrange list"
+        onPress={onView}
+        icon="list-ordered"
+        iconSize={20}
+        color={colors.ink2}
+        wash={{ kind: "squircle", size: SEARCH_HEIGHT, radius: SEARCH_RADIUS }}
+        backdrop={<SquircleFill size={{ width: SEARCH_HEIGHT, height: SEARCH_HEIGHT }} radius={SEARCH_RADIUS} color={colors.surface2} />}
+        style={styles.viewButton}
+      />
     </View>
   );
 };
@@ -472,17 +489,18 @@ const SectionHeader = ({
         )}
         <View style={styles.flex} />
         {onCheckAll ? (
-          <Tap
+          <IconTap
             unstable_pressDelay={PRESS_DELAY_MS}
             accessibilityRole="button"
             accessibilityLabel={done ? `Uncheck everything in ${row.title}` : `Check off everything in ${row.title}`}
             feedback="select"
-            pressScale={0.9}
             onPress={() => onCheckAll(row)}
+            icon="check-check"
+            iconSize={18}
+            color={done ? colors.accent : colors.ink3}
+            wash={SMALL_ICON_WASH}
             style={styles.checkAll}
-          >
-            <Icon name="check-check" size={18} color={done ? colors.accent : colors.ink3} />
-          </Tap>
+          />
         ) : (
           // Same footprint without the button, so headers keep their height across modes and pages.
           <View style={styles.checkAll} />
@@ -843,6 +861,8 @@ export default function ListScreen() {
   const [reorderMode, setReorderMode] = useState(false);
   const monthSheet = useRef<SheetRef>(null);
   const viewSheet = useRef<SheetRef>(null);
+  /** The list's drag pan, ours so icon buttons in the rows can hold it off while pressed. */
+  const listPan = useMemo(() => Gesture.Pan(), []);
   const updateSheet = useRef<SheetRef>(null);
   const listView = usePref("listView");
   const checkedItems = usePref("checkedItems");
@@ -1149,38 +1169,41 @@ export default function ListScreen() {
         <LayoutAnimationConfig skipEntering>
           <Animated.View key={month} entering={monthEntering(place.direction)} style={styles.rows}>
             {nothingShown ? <EmptyState searching={searching} /> : null}
-            <NestedReorderableList
-              data={rows}
-              // The first pass renders about a screenful so the list shows sooner (at launch, every
-              // extra row holds up the first frame); the rest render in one batch right after.
-              initialNumToRender={INITIAL_ROWS}
-              maxToRenderPerBatch={100}
-              windowSize={41}
-              keyExtractor={(row) => row.key}
-              renderItem={renderRow}
-              onReorder={onReorder}
-              onDragStart={() => {
-                "worklet";
-                scheduleOnRN(haptic, "medium");
-              }}
-              onDragEnd={() => {
-                "worklet";
-                scheduleOnRN(haptic, "light");
-              }}
-              shouldUpdateActiveItem
-              // The same in and out of reorder mode, so entering it mid-hold doesn't cancel the drag.
-              // The pan only takes over once a row has been held, so a plain swipe always scrolls.
-              dragEnabled
-              panEnabled
-              panActivateAfterLongPress={PAN_AFTER_HOLD_MS}
-              itemLayoutAnimation={ROW_LAYOUT}
-              scrollEnabled={false}
-              renderDropIndicator={() => (
-                <View style={styles.dropIndicatorInset}>
-                  <View style={[styles.dropIndicator, { backgroundColor: colors.accent }]} />
-                </View>
-              )}
-            />
+            <HeldTouchGestureContext value={listPan}>
+              <NestedReorderableList
+                data={rows}
+                // The first pass renders about a screenful so the list shows sooner (at launch, every
+                // extra row holds up the first frame); the rest render in one batch right after.
+                initialNumToRender={INITIAL_ROWS}
+                maxToRenderPerBatch={100}
+                windowSize={41}
+                keyExtractor={(row) => row.key}
+                renderItem={renderRow}
+                onReorder={onReorder}
+                onDragStart={() => {
+                  "worklet";
+                  scheduleOnRN(haptic, "medium");
+                }}
+                onDragEnd={() => {
+                  "worklet";
+                  scheduleOnRN(haptic, "light");
+                }}
+                shouldUpdateActiveItem
+                // The same in and out of reorder mode, so entering it mid-hold doesn't cancel the drag.
+                // The pan only takes over once a row has been held, so a plain swipe always scrolls.
+                dragEnabled
+                panEnabled
+                panGesture={listPan}
+                panActivateAfterLongPress={PAN_AFTER_HOLD_MS}
+                itemLayoutAnimation={ROW_LAYOUT}
+                scrollEnabled={false}
+                renderDropIndicator={() => (
+                  <View style={styles.dropIndicatorInset}>
+                    <View style={[styles.dropIndicator, { backgroundColor: colors.accent }]} />
+                  </View>
+                )}
+              />
+            </HeldTouchGestureContext>
           </Animated.View>
         </LayoutAnimationConfig>
       </ScrollViewContainer>

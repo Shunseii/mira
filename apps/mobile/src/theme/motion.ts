@@ -1,4 +1,4 @@
-import { LinearTransition } from "react-native-reanimated";
+import { Easing, LinearTransition, ReduceMotion, type WithTimingConfig } from "react-native-reanimated";
 
 /**
  * Motion rules: anything the finger drives (or that answers a tap with a
@@ -22,3 +22,10 @@ export const SPRING_POP = { mass: 1, stiffness: 520, damping: 26 } as const;
 
 /** Rows moving to a new place in a list: checked items sinking, neighbours closing the gap. */
 export const ROW_LAYOUT = LinearTransition.springify().mass(SPRING_SNAPPY.mass).stiffness(SPRING_SNAPPY.stiffness).damping(SPRING_SNAPPY.damping);
+
+/**
+ * Icon buttons' press wash and icon tint: quick in so the press reads at once, slower out. Never skipped,
+ * since a fade is fine under reduced motion (it's the scale that goes).
+ */
+export const PRESS_FADE_IN: WithTimingConfig = { duration: 90, easing: Easing.out(Easing.quad), reduceMotion: ReduceMotion.Never };
+export const PRESS_FADE_OUT: WithTimingConfig = { duration: 180, easing: Easing.out(Easing.quad), reduceMotion: ReduceMotion.Never };

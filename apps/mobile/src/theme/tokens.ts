@@ -37,6 +37,8 @@ export type Palette = {
   dangerFill: string;
   onDangerFill: string;
   scrim: string;
+  /** Icon buttons' press wash: 8% ink over whatever is behind. */
+  pressWash: string;
 };
 
 const LIGHT_BASE = {
@@ -54,6 +56,7 @@ const LIGHT_BASE = {
   dangerFill: "#B4502B",
   onDangerFill: "#FFF8F1",
   scrim: "rgba(34,30,25,0.35)",
+  pressWash: "rgba(34,30,25,0.08)",
 };
 
 const DARK_BASE = {
@@ -71,6 +74,7 @@ const DARK_BASE = {
   dangerFill: "#6E3220",
   onDangerFill: "#F6DCCD",
   scrim: "rgba(0,0,0,0.55)",
+  pressWash: "rgba(242,235,221,0.08)",
 };
 
 const hexToRgb = (hex: string): [number, number, number] => {

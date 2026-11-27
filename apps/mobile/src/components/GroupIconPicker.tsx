@@ -5,8 +5,9 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS } from "@/theme/tokens";
 import { BAN_GLYPH, GROUP_ICON_FONT, GROUP_ICON_GLYPHS } from "./groupIconGlyphs";
 import { Icon } from "./Icon";
+import { IconTap, SMALL_ICON_WASH } from "./PressWash";
 import { SquircleFill } from "./Squircle";
-import { PRESS_DELAY_MS, Tap } from "./Tap";
+import { PRESS_DELAY_MS } from "./Tap";
 import { Text } from "./Text";
 
 const GRID_COLUMNS = 6;
@@ -171,9 +172,15 @@ export const GroupIconPicker = memo(
             style={[styles.searchInput, { color: colors.ink }]}
           />
           {searching ? (
-            <Tap accessibilityLabel="Clear icon search" onPress={() => setQuery("")} style={styles.clear}>
-              <Icon name="x" size={18} color={colors.ink3} />
-            </Tap>
+            <IconTap
+              accessibilityLabel="Clear icon search"
+              onPress={() => setQuery("")}
+              icon="x"
+              iconSize={18}
+              color={colors.ink3}
+              wash={SMALL_ICON_WASH}
+              style={styles.clear}
+            />
           ) : null}
         </View>
         {searching ? (

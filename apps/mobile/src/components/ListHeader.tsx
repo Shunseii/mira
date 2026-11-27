@@ -15,6 +15,7 @@ import { useHouseholdState } from "@/data/HouseholdProvider";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS } from "@/theme/tokens";
 import { Icon } from "./Icon";
+import { ICON_WASH, IconTap } from "./PressWash";
 import { Tap, PRESS_DELAY_MS } from "./Tap";
 import { Text } from "./Text";
 import { Wordmark } from "./Wordmark";
@@ -148,9 +149,17 @@ export const ListTopBar = ({
       <Wordmark />
       <View style={styles.topRight}>
         {syncState ? <SyncPill key={syncState} state={syncState} onPress={onSyncPill} /> : updateReady ? <UpdatePill onPress={onUpdatePill} /> : null}
-        <Tap unstable_pressDelay={PRESS_DELAY_MS} accessibilityRole="button" accessibilityLabel="Settings" onPress={onSettings} style={styles.settings}>
-          <Icon name="settings-2" size={22} color={colors.ink2} />
-        </Tap>
+        <IconTap
+          unstable_pressDelay={PRESS_DELAY_MS}
+          accessibilityRole="button"
+          accessibilityLabel="Settings"
+          onPress={onSettings}
+          icon="settings-2"
+          iconSize={22}
+          color={colors.ink2}
+          wash={ICON_WASH}
+          style={styles.settings}
+        />
       </View>
     </View>
   );

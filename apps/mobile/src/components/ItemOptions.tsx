@@ -4,6 +4,7 @@ import { StyleSheet, View } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { GroupChip } from "./GroupBadge";
 import { Icon } from "./Icon";
+import { IconTap, type PressWashShape } from "./PressWash";
 import { Tap, PRESS_DELAY_MS } from "./Tap";
 import { Text } from "./Text";
 
@@ -44,34 +45,36 @@ export const Stepper = ({ value, onChange }: { value: number | undefined; onChan
   const shown = value ?? 1;
   return (
     <View style={styles.stepper}>
-      <Tap
+      <IconTap
         unstable_pressDelay={PRESS_DELAY_MS}
         accessibilityRole="button"
         accessibilityLabel="Less"
         feedback="select"
-        pressScale={0.88}
         disabled={shown <= 1}
         onPress={() => onChange(shown - 1 <= 1 ? undefined : shown - 1)}
+        icon="minus"
+        iconSize={18}
+        color={colors.ink}
+        wash={STEP_WASH}
         style={[styles.stepButton, { backgroundColor: colors.surface2 }]}
-      >
-        <Icon name="minus" size={18} color={colors.ink} />
-      </Tap>
+      />
       <View style={styles.stepValue}>
         <Text variant="bodyStrong" color={value === undefined ? "ink3" : "ink"}>
           {shown}
         </Text>
       </View>
-      <Tap
+      <IconTap
         unstable_pressDelay={PRESS_DELAY_MS}
         accessibilityRole="button"
         accessibilityLabel="More"
         feedback="select"
-        pressScale={0.88}
         onPress={() => onChange(shown + 1)}
+        icon="plus"
+        iconSize={18}
+        color={colors.ink}
+        wash={STEP_WASH}
         style={[styles.stepButton, { backgroundColor: colors.surface2 }]}
-      >
-        <Icon name="plus" size={18} color={colors.ink} />
-      </Tap>
+      />
     </View>
   );
 };
@@ -108,12 +111,16 @@ export const MonthValue = ({ month, onPress }: { month: MonthKey; onPress: () =>
   );
 };
 
+const STEP_SIZE = 40;
+/** Covers the whole round fill. */
+const STEP_WASH: PressWashShape = { kind: "circle", size: STEP_SIZE };
+
 const styles = StyleSheet.create({
   table: { borderTopWidth: StyleSheet.hairlineWidth },
   row: { minHeight: 56, paddingVertical: 6, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 16, borderBottomWidth: StyleSheet.hairlineWidth },
   control: { flexShrink: 1, alignItems: "flex-end" },
   stepper: { flexDirection: "row", alignItems: "center", gap: 4 },
-  stepButton: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  stepButton: { width: STEP_SIZE, height: STEP_SIZE, borderRadius: STEP_SIZE / 2, alignItems: "center", justifyContent: "center" },
   stepValue: { width: 56, alignItems: "center" },
   plainValue: { height: 40, flexDirection: "row", alignItems: "center", gap: 6 },
 });

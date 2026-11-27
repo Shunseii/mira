@@ -1504,6 +1504,7 @@
       "type": "frame"
     },
     "5L1KVVLR": {
+      "css": "transition:\n  color 180ms ease-out,\n  scale 250ms cubic-bezier(0.23, 1, 0.32, 1);\n\n:active > & {\n  color: {color.ink};\n  scale: 0.9;\n  transition-duration: 90ms, 250ms;\n}",
       "icon": "layers",
       "index": "a000",
       "name": "Icon",
@@ -2752,6 +2753,7 @@
       "type": "frame"
     },
     "9d7tIsMz": {
+      "css": "transition:\n  color 180ms ease-out,\n  scale 250ms cubic-bezier(0.23, 1, 0.32, 1);\n\n:active > & {\n  color: {color.ink};\n  scale: 0.9;\n  transition-duration: 90ms, 250ms;\n}",
       "icon": "arrow-left",
       "index": "a000",
       "name": "Icon",
@@ -4272,6 +4274,7 @@
     },
     "FrWocyUt": {
       "component": {},
+      "css": "isolation: isolate;\n\n&::before {\n  content: '';\n  position: absolute;\n  left: -6px;\n  right: 0px;\n  top: 4px;\n  bottom: 4px;\n  border-radius: 999px;\n  background: color-mix(in srgb, {color.ink} 8%, transparent);\n  z-index: -1;\n  opacity: 0;\n  scale: 0.7;\n  transition:\n    opacity 180ms ease-out,\n    scale 180ms cubic-bezier(0.23, 1, 0.32, 1);\n}\n\n&:active::before {\n  opacity: 1;\n  scale: 1;\n  transition-duration: 90ms;\n}",
       "name": "Button — Link",
       "style": {
         "align-items": "center",
@@ -5202,6 +5205,7 @@
       "type": "frame"
     },
     "JRMj9pRU": {
+      "css": "isolation: isolate;\n\n&::before {\n  content: '';\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  width: 40px;\n  height: 40px;\n  translate: -50% -50%;\n  border-radius: 999px;\n  background: color-mix(in srgb, {color.ink} 8%, transparent);\n  z-index: -1;\n  opacity: 0;\n  scale: 0.7;\n  transition:\n    opacity 180ms ease-out,\n    scale 180ms cubic-bezier(0.23, 1, 0.32, 1);\n}\n\n&:active::before {\n  opacity: 1;\n  scale: 1;\n  transition-duration: 90ms;\n}",
       "index": "a002",
       "name": "Increment",
       "parentId": "EOFsQF1g",
@@ -8796,6 +8800,7 @@
     },
     "VfxvyvKE": {
       "component": {},
+      "css": "isolation: isolate;\n\n&::before {\n  content: '';\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  width: 40px;\n  height: 40px;\n  translate: -50% -50%;\n  border-radius: 999px;\n  background: color-mix(in srgb, {color.ink} 8%, transparent);\n  z-index: -1;\n  opacity: 0;\n  scale: 0.7;\n  transition:\n    opacity 180ms ease-out,\n    scale 180ms cubic-bezier(0.23, 1, 0.32, 1);\n}\n\n&:active::before {\n  opacity: 1;\n  scale: 1;\n  transition-duration: 90ms;\n}",
       "name": "Icon Button",
       "style": {
         "align-items": "center",
@@ -9743,6 +9748,7 @@
     },
     "ZAypFIau": {
       "component": {},
+      "css": "isolation: isolate;\n\n&::before {\n  content: '';\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  width: 44px;\n  height: 44px;\n  translate: -50% -50%;\n  border-radius: 21px;\n  corner-shape: squircle;\n  background: color-mix(in srgb, {color.ink} 8%, transparent);\n  z-index: -1;\n  opacity: 0;\n  scale: 0.7;\n  transition:\n    opacity 180ms ease-out,\n    scale 180ms cubic-bezier(0.23, 1, 0.32, 1);\n}\n\n&:active::before {\n  opacity: 1;\n  scale: 1;\n  transition-duration: 90ms;\n}",
       "name": "Icon Button — Filled Square",
       "style": {
         "align-items": "center",
@@ -11360,6 +11366,7 @@
       "type": "text"
     },
     "etNCt60W": {
+      "css": "transition:\n  color 180ms ease-out,\n  scale 250ms cubic-bezier(0.23, 1, 0.32, 1);\n\n:active > & {\n  color: {color.ink};\n  scale: 0.9;\n  transition-duration: 90ms, 250ms;\n}",
       "icon": "settings-2",
       "index": "a000",
       "name": "Icon",
@@ -11440,6 +11447,7 @@
       "type": "frame"
     },
     "fThrI93Z": {
+      "css": "isolation: isolate;\n\n&::before {\n  content: '';\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  width: 40px;\n  height: 40px;\n  translate: -50% -50%;\n  border-radius: 999px;\n  background: color-mix(in srgb, {color.ink} 8%, transparent);\n  z-index: -1;\n  opacity: 0;\n  scale: 0.7;\n  transition:\n    opacity 180ms ease-out,\n    scale 180ms cubic-bezier(0.23, 1, 0.32, 1);\n}\n\n&:active::before {\n  opacity: 1;\n  scale: 1;\n  transition-duration: 90ms;\n}",
       "index": "a000",
       "name": "Decrement",
       "parentId": "EOFsQF1g",
@@ -14123,6 +14131,7 @@
     },
     "paIFr9tX": {
       "component": {},
+      "css": "isolation: isolate;\n\n&::before {\n  content: '';\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  width: 44px;\n  height: 44px;\n  translate: -50% -50%;\n  border-radius: 999px;\n  background: color-mix(in srgb, {color.ink} 8%, transparent);\n  z-index: -1;\n  opacity: 0;\n  scale: 0.7;\n  transition:\n    opacity 180ms ease-out,\n    scale 180ms cubic-bezier(0.23, 1, 0.32, 1);\n}\n\n&:active::before {\n  opacity: 1;\n  scale: 1;\n  transition-duration: 90ms;\n}",
       "name": "Icon Button — Filled",
       "style": {
         "align-items": "center",
@@ -15910,6 +15919,7 @@
       "type": "frame"
     },
     "wrZUcO0C": {
+      "css": "transition:\n  color 180ms ease-out,\n  scale 250ms cubic-bezier(0.23, 1, 0.32, 1);\n\n:active > & {\n  color: {color.ink};\n  scale: 0.9;\n  transition-duration: 90ms, 250ms;\n}",
       "icon": "minus",
       "index": "a000",
       "name": "Icon",
@@ -15957,6 +15967,7 @@
       "type": "text"
     },
     "x0JHsQPU": {
+      "css": "transition:\n  color 180ms ease-out,\n  scale 250ms cubic-bezier(0.23, 1, 0.32, 1);\n\n:active > & {\n  color: {color.ink};\n  scale: 0.9;\n  transition-duration: 90ms, 250ms;\n}",
       "icon": "plus",
       "index": "a000",
       "name": "Icon",

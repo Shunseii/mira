@@ -2,6 +2,7 @@ import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } f
 import { useTheme } from "@/theme/ThemeProvider";
 import { TAP } from "@/theme/tokens";
 import { Icon, type IconName } from "./Icon";
+import { ICON_WASH, IconTap, type PressWashShape } from "./PressWash";
 import { SquircleFill } from "./Squircle";
 import { Tap } from "./Tap";
 import { Text } from "./Text";
@@ -53,6 +54,9 @@ export const Button = ({ label, onPress, kind = "primary", icon, busy, disabled,
   );
 };
 
+/** A filled icon button's wash covers its whole fill. */
+const FILLED_ICON_WASH: PressWashShape = { kind: "circle", size: TAP.min };
+
 /** 44pt round icon button (month arrows, back, settings). */
 export const IconButton = ({
   icon,
@@ -77,18 +81,19 @@ export const IconButton = ({
   const background = on ? colors.accentSoft : filled ? colors.surface2 : undefined;
   const iconColor = on ? colors.accent : filled ? colors.ink : colors.ink2;
   return (
-    <Tap
+    <IconTap
       accessibilityRole={isSwitch ? "switch" : "button"}
       accessibilityState={isSwitch ? { checked: on } : undefined}
       accessibilityLabel={label}
       onPress={onPress}
       disabled={disabled}
       feedback={feedback}
-      pressScale={0.9}
+      icon={icon}
+      iconSize={20}
+      color={iconColor}
+      wash={background ? FILLED_ICON_WASH : ICON_WASH}
       style={[styles.icon, background ? { backgroundColor: background } : null]}
-    >
-      <Icon name={icon} size={20} color={iconColor} />
-    </Tap>
+    />
   );
 };
 

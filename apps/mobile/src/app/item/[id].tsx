@@ -15,13 +15,13 @@ import { StyleSheet, View } from "react-native";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/Button";
 import { FormScreen } from "@/components/FormScreen";
-import { Icon } from "@/components/Icon";
 import { ItemFields } from "@/components/ItemFields";
 import { parseQuantity } from "@/components/ItemOptions";
 import { NameField } from "@/components/NameField";
 import { NavBar } from "@/components/NavBar";
+import { ICON_WASH, IconTap } from "@/components/PressWash";
 import { Screen } from "@/components/Screen";
-import { Tap, haptic } from "@/components/Tap";
+import { haptic } from "@/components/Tap";
 import { Text } from "@/components/Text";
 import { useHousehold, useStoreQuery } from "@/data/HouseholdProvider";
 import { usePref } from "@/data/prefs";
@@ -96,7 +96,7 @@ export default function ItemDetail() {
         <NavBar
           back={{ label: monthName(item.listId) }}
           right={
-            <Tap
+            <IconTap
               accessibilityRole="button"
               accessibilityLabel="Delete item"
               feedback="medium"
@@ -104,10 +104,12 @@ export default function ItemDetail() {
                 household.write((store) => deleteItem({ store, itemId: item.id }));
                 goBack();
               }}
+              icon="trash-2"
+              iconSize={20}
+              color={colors.ink2}
+              wash={ICON_WASH}
               style={styles.trash}
-            >
-              <Icon name="trash-2" size={20} color={colors.ink2} />
-            </Tap>
+            />
           }
         />
       }

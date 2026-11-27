@@ -13,10 +13,10 @@ export const haptic = (kind: "light" | "medium" | "success" | "select" = "light"
   else void Haptics.impactAsync(kind === "medium" ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light);
 };
 
-type TapProps = Omit<PressableProps, "style" | "children"> & {
+export type TapProps = Omit<PressableProps, "style" | "children"> & {
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
-  /** How far it shrinks while pressed. */
+  /** How far it shrinks while pressed; 1 leaves the shrink off (IconTap and the back link press with a wash instead). */
   pressScale?: number;
   feedback?: "light" | "medium" | "select" | "none";
   /** false: the caller shows its own disabled look instead of the whole thing fading. */
@@ -57,11 +57,11 @@ export const Tap = ({
       unstable_pressDelay={unstable_pressDelay}
       hitSlop={rest.hitSlop ?? 4}
       onPressIn={(event) => {
-        scale.set(withSpring(pressScale, SPRING_SNAPPY));
+        if (pressScale !== 1) scale.set(withSpring(pressScale, SPRING_SNAPPY));
         onPressIn?.(event);
       }}
       onPressOut={(event) => {
-        scale.set(withSpring(1, SPRING_SNAPPY));
+        if (pressScale !== 1) scale.set(withSpring(1, SPRING_SNAPPY));
         onPressOut?.(event);
       }}
       onPress={(event) => {

@@ -8,9 +8,10 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS, SEPARATOR_HEIGHT, TAP } from "@/theme/tokens";
 import { GroupFill, GroupTile, useGroupTone } from "./GroupBadge";
 import { Icon } from "./Icon";
-import { HOLD_MS, PRESS_DELAY_MS, Tap, haptic } from "./Tap";
 import { NewItemTint, type RowTint } from "./NewItemTint";
+import { HOLD_MS, PRESS_DELAY_MS, haptic } from "./Tap";
 import { Text } from "./Text";
+import { IconTap, SMALL_ICON_WASH } from "./PressWash";
 
 /** How far rows (and their tint) reach past the page's content edge on each side. */
 export const ROW_INSET = 12;
@@ -189,15 +190,16 @@ export const ItemRow = memo(({ item, pending, onPress, onLongPress, onDelete, on
             </Text>
           ) : null}
           {onEdit ? (
-            <Tap
+            <IconTap
               accessibilityRole="button"
               accessibilityLabel={`Edit ${item.name}`}
-              pressScale={0.88}
               onPress={() => onEdit(item)}
+              icon="pencil"
+              iconSize={18}
+              color={colors.ink3}
+              wash={SMALL_ICON_WASH}
               style={styles.trailing}
-            >
-              <Icon name="pencil" size={18} color={colors.ink3} />
-            </Tap>
+            />
           ) : null}
           {grip}
         </>
