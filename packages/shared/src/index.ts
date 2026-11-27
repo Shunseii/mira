@@ -4,6 +4,7 @@ export * from "./schema";
 export * from "./ops";
 export * from "./rollover";
 export * from "./view";
+export * from "./newItems";
 export * from "./protocol";
 export * from "./groupStyle";
 export * from "./groupColor";

@@ -5,6 +5,7 @@ import { createMergeableStore, type MergeableStore } from "tinybase";
 import { createWsSynchronizer, type WsSynchronizer } from "tinybase/synchronizers/synchronizer-ws-client";
 import { deviceStorage } from "@/lib/deviceStorage";
 import { createExternalStore } from "@/lib/externalStore";
+import { trackNewItems, type NewItemsTracker } from "./newItems";
 import { startLocalPersistence, type LocalPersister } from "./persister";
 import { checkPassword, syncSocketUrl } from "./server";
 
@@ -32,6 +33,8 @@ export type Household = {
    * attempt shows offline at once instead of retrying quietly first.
    */
   nudge: (options?: { asked?: boolean }) => Promise<void>;
+  /** Items someone else added that this device hasn't shown yet (the new-item highlight). */
+  newItems: Pick<NewItemsTracker, "unseen" | "markSeen">;
   stop: () => Promise<void>;
 };
 
@@ -75,6 +78,7 @@ export const startHousehold = async ({
   const dbName = `mira-${stableHash(serverUrl)}`;
   const pendingKey = `mira.pending.${dbName}`;
   const syncedKey = `mira.synced.${dbName}`;
+  const unseenKey = `mira.unseen.${dbName}`;
   const loadPending = (): string[] => {
     try {
       const parsed: unknown = JSON.parse(deviceStorage.get(pendingKey) ?? "[]");
@@ -133,13 +137,20 @@ export const startHousehold = async ({
 
   // Bookkeeping the app does on its own (carrying items into a new month, "last seen"), so it skips
   // write(): it still syncs, but it isn't a change the person made and shouldn't count as waiting to sync.
+  let housekeepingDepth = 0;
   const housekeeping = () => {
-    store.transaction(() => {
-      rollover({ store, month: monthKeyOf(new Date()) });
-      const userId = getUserId();
-      if (userId) touchUser({ store, userId });
-    });
+    housekeepingDepth++;
+    try {
+      store.transaction(() => {
+        rollover({ store, month: monthKeyOf(new Date()) });
+        const userId = getUserId();
+        if (userId) touchUser({ store, userId });
+      });
+    } finally {
+      housekeepingDepth--;
+    }
   };
+  let newItems: NewItemsTracker | undefined;
 
   let persister: LocalPersister | undefined;
   let synchronizer: WsSynchronizer<WebSocket> | undefined;
@@ -211,6 +222,7 @@ export const startHousehold = async ({
         deviceStorage.set(syncedKey, "1");
         patch({ hasSynced: true });
       }
+      newItems?.startCounting();
       setStatus("online");
       if (state.get().pending.length > 0) setPending([]);
       housekeeping();
@@ -269,6 +281,14 @@ export const startHousehold = async ({
     }),
   ]);
   networkDown = network?.isConnected === false;
+  const tracker = trackNewItems({
+    store,
+    storageKey: unseenKey,
+    getUserId,
+    isLocalChange: () => localWriteDepth > 0 || housekeepingDepth > 0,
+  });
+  newItems = tracker;
+  if (state.get().hasSynced) tracker.startCounting();
   patch({ ready: true });
   housekeeping();
   void connect();
@@ -289,8 +309,10 @@ export const startHousehold = async ({
     state,
     write,
     nudge,
+    newItems: { unseen: tracker.unseen, markSeen: tracker.markSeen },
     stop: async () => {
       stopped = true;
+      tracker.stop();
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (persistTimer) {
         clearTimeout(persistTimer);

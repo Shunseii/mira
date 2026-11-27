@@ -15,9 +15,9 @@ import {
   type MonthKey,
   type MonthView,
 } from "@mira/shared";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useIsFocused } from "expo-router";
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { BackHandler, RefreshControl, type ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { AppState, BackHandler, RefreshControl, type ScrollView, StyleSheet, TextInput, View } from "react-native";
 import Animated, {
   type AnimatedRef,
   Extrapolation,
@@ -51,6 +51,7 @@ import { SQUIRCLE_SHADOW_RADIUS, SquircleFill } from "@/components/Squircle";
 import { GripIcon, ItemRow, ROW_INSET } from "@/components/ItemRow";
 import { ListTopBar, MonthTitle } from "@/components/ListHeader";
 import { MonthSheet } from "@/components/MonthSheet";
+import { staggerDelay, type RowTint } from "@/components/NewItemTint";
 import { UpdateSheet } from "@/components/UpdateReady";
 import type { SheetRef } from "@/components/Sheet";
 import { Screen } from "@/components/Screen";
@@ -60,9 +61,11 @@ import { HOLD_MS, Tap, haptic, PRESS_DELAY_MS } from "@/components/Tap";
 import { Text } from "@/components/Text";
 import { useCurrentMonth, useHousehold, useHouseholdState, useStoreQuery } from "@/data/HouseholdProvider";
 import { getPref, setPrefs, usePref, type ListView } from "@/data/prefs";
+import type { UnseenItems } from "@/data/newItems";
 import { updateSession, useSession } from "@/data/session";
 import { takeAddedItems } from "@/lib/addedItems";
 import { setExpandOrigin, useOriginHidden } from "@/lib/expandOrigin";
+import { useExternalStore } from "@/lib/externalStore";
 import { createStabilizer } from "@/lib/stableRows";
 import { ROW_LAYOUT, SPRING_SNAPPY } from "@/theme/motion";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -80,6 +83,8 @@ const SEARCH_RADIUS = 14;
 const MONTH_SHIFT = 24;
 const MONTH_FADE_MS = 180;
 const MIN_SYNC_FEEDBACK_MS = 600;
+/** Longer than an added item's highlight takes to hold and fade (with reduced motion too), after which it's dropped. */
+const OWN_TINT_FOR_MS = 2500;
 
 const monthEntering = (direction: 1 | -1) => () => {
   "worklet";
@@ -141,7 +146,7 @@ type HeaderRow = {
  * `hidden`: filtered out by the search. `inChecked`: in the Checked section, which folds on the UI thread.
  * Both stay mounted, so clearing the search or unfolding Checked is only a style change, not mounting rows.
  */
-type ItemRowData = { kind: "item"; key: string; item: Item; group?: Group; hidden?: boolean; inChecked?: boolean };
+type ItemRowData = { kind: "item"; key: string; item: Item; group?: Group; hidden?: boolean; inChecked?: boolean; tint?: RowTint };
 type Row = HeaderRow | ItemRowData;
 
 const buildRows = ({ view, listView, groupsById }: { view: MonthView; listView: ListView; groupsById: Map<string, Group> }): Row[] => [
@@ -230,6 +235,30 @@ const dropTarget = ({ rows, index }: { rows: Row[]; index: number }): { groupId:
 
 /** By priority: the dropped item's place among all the month's unchecked items. */
 const priorityDropIndex = ({ rows, index }: { rows: Row[]; index: number }): number => rows.slice(0, index).filter(isOpenItem).length;
+
+/**
+ * Each open row's new-item tint: someone else's items until seen (rows that arrived together stagger in
+ * list order), then their fade; items just added here (`own`, with their stagger delays).
+ */
+const rowTints = ({ rows, unseen, own }: { rows: Row[]; unseen: UnseenItems; own: ReadonlyMap<string, number> }): Map<string, RowTint> => {
+  const tints = new Map<string, RowTint>();
+  const arrivedTogether = new Map<number | undefined, number>();
+  for (const row of rows) {
+    if (row.kind !== "item" || row.inChecked || row.item.checkedAt !== undefined) continue;
+    const entry = unseen.get(row.key);
+    const ownDelay = own.get(row.key);
+    if (entry?.fadeDelayMs !== undefined) {
+      tints.set(row.key, { phase: "fading", delayMs: entry.fadeDelayMs });
+    } else if (entry) {
+      const index = arrivedTogether.get(entry.arrivedAt) ?? 0;
+      arrivedTogether.set(entry.arrivedAt, index + 1);
+      tints.set(row.key, { phase: "held", delayMs: staggerDelay(index), arrivedAt: entry.arrivedAt });
+    } else if (ownDelay !== undefined) {
+      tints.set(row.key, { phase: "own", delayMs: ownDelay });
+    }
+  }
+  return tints;
+};
 
 const SearchBar = ({ month, value, onChange, onView }: { month: MonthKey; value: string; onChange: (text: string) => void; onView: () => void }) => {
   const { colors } = useTheme();
@@ -514,6 +543,7 @@ const RowContent = memo(
     item,
     group,
     pending,
+    tint,
     handlers,
     reorderMode,
     active,
@@ -522,6 +552,7 @@ const RowContent = memo(
     item: Item;
     group?: Group;
     pending: boolean;
+    tint?: RowTint;
     handlers: RowHandlers;
     reorderMode: boolean;
     active: boolean;
@@ -535,6 +566,7 @@ const RowContent = memo(
           item={item}
           group={group}
           pending={pending}
+          tint={tint}
           onPress={reorderMode ? noop : handlers.onPress}
           onLongPress={onLongPress}
           onDelete={reorderMode ? undefined : handlers.onDelete}
@@ -559,12 +591,14 @@ const DraggableItem = memo(
     item,
     group,
     pending,
+    tint,
     handlers,
     reorderMode,
   }: {
     item: Item;
     group?: Group;
     pending: boolean;
+    tint?: RowTint;
     handlers: RowHandlers;
     reorderMode: boolean;
   }) => {
@@ -586,6 +620,7 @@ const DraggableItem = memo(
         item={item}
         group={group}
         pending={pending}
+        tint={tint}
         handlers={handlers}
         reorderMode={reorderMode}
         active={active}
@@ -604,9 +639,16 @@ const REVEAL_FRAMES = 30;
 const frameInWindow = (view: Pick<View, "measureInWindow">) =>
   new Promise<{ y: number; height: number }>((resolve) => view.measureInWindow((_x, y, _width, height) => resolve({ y, height })));
 
+/** Frames the offset must hold still before a programmatic scroll counts as settled. */
+const SETTLE_FRAMES = 6;
+/** Stop waiting for a scroll to settle after about a second. */
+const SETTLE_MAX_FRAMES = 60;
+
 /**
  * Back from Add item, scrolls the list to the last item added there if it's out of view (the Scroll to new
  * items pref). Leaves the list alone when that item is hidden: filtered out by the search, or in another month.
+ * Hands the added items that are showing, in list order, to `onRevealed` once the scroll settles (straight
+ * away when there's nothing to scroll), which is when their highlight starts.
  */
 const useScrollToAdded = ({
   rows,
@@ -614,6 +656,7 @@ const useScrollToAdded = ({
   scrollOffset,
   rowViews,
   bottomCover,
+  onRevealed,
 }: {
   rows: Row[];
   scrollRef: React.RefObject<ScrollView | null>;
@@ -621,6 +664,7 @@ const useScrollToAdded = ({
   rowViews: React.RefObject<Map<string, View>>;
   /** How much of the bottom of the list the + button covers. */
   bottomCover: number;
+  onRevealed: (itemIds: string[]) => void;
 }) => {
   const rowsRef = useRef(rows);
   useEffect(() => {
@@ -629,20 +673,32 @@ const useScrollToAdded = ({
 
   useFocusEffect(
     useCallback(() => {
-      const added = takeAddedItems();
-      if (added.length === 0 || !getPref("scrollToNew")) return undefined;
-      const shown = new Set(rowsRef.current.filter((row) => row.kind === "item" && !row.hidden && !row.inChecked).map((row) => row.key));
-      const target = [...added].reverse().find((id) => shown.has(id));
-      if (!target) return undefined;
+      const added = new Set(takeAddedItems());
+      if (added.size === 0) return undefined;
+      const shownAdded = rowsRef.current
+        .filter((row) => row.kind === "item" && !row.hidden && !row.inChecked && added.has(row.key))
+        .map((row) => row.key);
+      const target = [...added].reverse().find((id) => shownAdded.includes(id));
+      if (!target || !getPref("scrollToNew")) {
+        if (shownAdded.length > 0) onRevealed(shownAdded);
+        return undefined;
+      }
 
       let frame = 0;
       let cancelled = false;
+      const waitToSettle = ({ last, still, framesLeft }: { last: number; still: number; framesLeft: number }) => {
+        const offset = scrollOffset.get();
+        const stillFor = offset === last ? still + 1 : 0;
+        if (stillFor >= SETTLE_FRAMES || framesLeft === 0) return onRevealed(shownAdded);
+        frame = requestAnimationFrame(() => waitToSettle({ last: offset, still: stillFor, framesLeft: framesLeft - 1 }));
+      };
       const reveal = async (framesLeft: number) => {
         const row = rowViews.current.get(target);
         const scroll = scrollRef.current;
         const scrollHost = scroll?.getNativeScrollRef();
         if (!row || !scroll || !scrollHost) {
           if (framesLeft > 0) frame = requestAnimationFrame(() => void reveal(framesLeft - 1));
+          else onRevealed(shownAdded);
           return;
         }
         const [rowFrame, listFrame] = await Promise.all([frameInWindow(row), frameInWindow(scrollHost)]);
@@ -655,15 +711,121 @@ const useScrollToAdded = ({
             : rowFrame.y + rowFrame.height > visibleBottom
               ? rowFrame.y + rowFrame.height - visibleBottom + REVEAL_MARGIN
               : 0;
-        if (distance === 0) return;
+        if (distance === 0) return onRevealed(shownAdded);
         scroll.scrollTo({ y: Math.max(0, scrollOffset.get() + distance), animated: true });
+        waitToSettle({ last: Number.NaN, still: 0, framesLeft: SETTLE_MAX_FRAMES });
       };
       void reveal(REVEAL_FRAMES);
       return () => {
         cancelled = true;
         cancelAnimationFrame(frame);
       };
-    }, [bottomCover, rowViews, scrollOffset, scrollRef]),
+    }, [bottomCover, onRevealed, rowViews, scrollOffset, scrollRef]),
+  );
+};
+
+/** How often rows waiting to be seen are checked for being on screen. */
+const SEEN_TICK_MS = 250;
+/** Someone else's item counts as seen once its row has been at least half on screen this long without a break. */
+const SEEN_AFTER_MS = 2000;
+const SEEN_SHARE = 0.5;
+
+/**
+ * Marks someone else's items as seen: rows at least half on screen for SEEN_AFTER_MS, or on screen when
+ * the list is left for another screen. Only runs while such rows are showing and the app is in front, and
+ * only measures those rows, so it costs nothing on a list with none.
+ */
+const useSeenItems = ({
+  rows,
+  scrollRef,
+  rowViews,
+  markSeen,
+}: {
+  rows: Row[];
+  scrollRef: React.RefObject<ScrollView | null>;
+  rowViews: React.RefObject<Map<string, View>>;
+  markSeen: (seen: { itemId: string; delayMs: number }[]) => void;
+}) => {
+  const waiting = useMemo(
+    () => rows.filter((row) => row.kind === "item" && !row.hidden && row.tint?.phase === "held").map((row) => row.key),
+    [rows],
+  );
+  const waitingKey = waiting.join(",");
+  const waitingRef = useRef(waiting);
+  useEffect(() => {
+    waitingRef.current = waiting;
+  }, [waiting]);
+  const onScreenSince = useRef(new Map<string, number>());
+
+  const markInListOrder = useCallback(
+    (ids: ReadonlySet<string>) => {
+      const ordered = waitingRef.current.filter((id) => ids.has(id));
+      if (ordered.length > 0) markSeen(ordered.map((itemId, index) => ({ itemId, delayMs: staggerDelay(index) })));
+    },
+    [markSeen],
+  );
+
+  const focused = useIsFocused();
+  const [active, setActive] = useState(AppState.currentState !== "background" && AppState.currentState !== "inactive");
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (next) => setActive(next === "active"));
+    return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    const since = onScreenSince.current;
+    // Leaving the screen is handled below (what's on screen then counts as seen), so only clear for the rest.
+    if (!focused) return undefined;
+    if (!active || waitingKey === "") {
+      since.clear();
+      return undefined;
+    }
+    let cancelled = false;
+    const tick = async () => {
+      const host = scrollRef.current?.getNativeScrollRef();
+      if (!host) return;
+      const ids = waitingRef.current;
+      const [listFrame, ...rowFrames] = await Promise.all([
+        frameInWindow(host),
+        ...ids.map((id) => {
+          const view = rowViews.current.get(id);
+          return view ? frameInWindow(view) : Promise.resolve(undefined);
+        }),
+      ]);
+      if (cancelled) return;
+      const now = Date.now();
+      const seen = new Set<string>();
+      ids.forEach((id, index) => {
+        const row = rowFrames[index];
+        const overlap = row ? Math.min(row.y + row.height, listFrame.y + listFrame.height) - Math.max(row.y, listFrame.y) : 0;
+        if (!row || row.height === 0 || overlap / row.height < SEEN_SHARE) {
+          since.delete(id);
+          return;
+        }
+        const from = since.get(id) ?? now;
+        since.set(id, from);
+        if (now - from >= SEEN_AFTER_MS) seen.add(id);
+      });
+      for (const id of since.keys()) if (!ids.includes(id)) since.delete(id);
+      markInListOrder(seen);
+    };
+    void tick();
+    const interval = setInterval(() => void tick(), SEEN_TICK_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [active, focused, markInListOrder, rowViews, scrollRef, waitingKey]);
+
+  // Leaving the list counts as seeing what was on screen (as of the last check, at most a tick ago).
+  useFocusEffect(
+    useCallback(
+      () => () => {
+        markInListOrder(new Set(onScreenSince.current.keys()));
+        onScreenSince.current.clear();
+      },
+      [markInListOrder],
+    ),
   );
 };
 
@@ -720,17 +882,26 @@ export default function ListScreen() {
   // Hand memoized rows the same objects when nothing about them changed, so one check re-renders one row.
   const [stableItem] = useState(createStabilizer<Item>);
   const [stableGroup] = useState(createStabilizer<Group>);
+  const [stableTint] = useState(createStabilizer<RowTint>);
+  const unseen = useExternalStore(household.newItems.unseen);
+  // Items just added on this device, with their stagger delays, while their highlight plays.
+  const [ownTints, setOwnTints] = useState<ReadonlyMap<string, number>>(() => new Map());
   const rows = useMemo(() => {
     const matches =
       searchView && new Map(buildRows({ view: searchView, listView, groupsById }).map((row) => [row.key, row]));
-    return buildRows({ view, listView, groupsById })
-      .map((row): Row => (matches ? (matches.get(row.key) ?? { ...row, hidden: true }) : row))
-      .map((row) =>
-        row.kind === "item"
-          ? { ...row, item: stableItem(row.item.id, row.item), group: row.group && stableGroup(row.group.id, row.group) }
-          : row,
-      );
-  }, [groupsById, listView, searchView, stableGroup, stableItem, view]);
+    const built = buildRows({ view, listView, groupsById }).map((row): Row => (matches ? (matches.get(row.key) ?? { ...row, hidden: true }) : row));
+    const tints = rowTints({ rows: built, unseen, own: ownTints });
+    return built.map((row) => {
+      if (row.kind !== "item") return row;
+      const tint = tints.get(row.key);
+      return {
+        ...row,
+        item: stableItem(row.item.id, row.item),
+        group: row.group && stableGroup(row.group.id, row.group),
+        tint: tint && stableTint(row.key, tint),
+      };
+    });
+  }, [groupsById, listView, ownTints, searchView, stableGroup, stableItem, stableTint, unseen, view]);
   const nothingShown = rows.every((row) => row.hidden);
 
   const scrollRef = useRef<ScrollView>(null);
@@ -747,7 +918,15 @@ export default function ListScreen() {
     [],
   );
   const dockPadding = Math.max(insets.bottom, 16) + 8;
-  useScrollToAdded({ rows, scrollRef, scrollOffset, rowViews, bottomCover: FAB_SIZE + dockPadding });
+  const ownTintTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const highlightAdded = useCallback((itemIds: string[]) => {
+    setOwnTints(new Map(itemIds.map((id, index) => [id, staggerDelay(index)])));
+    clearTimeout(ownTintTimer.current);
+    ownTintTimer.current = setTimeout(() => setOwnTints(new Map()), OWN_TINT_FOR_MS);
+  }, []);
+  useEffect(() => () => clearTimeout(ownTintTimer.current), []);
+  useScrollToAdded({ rows, scrollRef, scrollOffset, rowViews, bottomCover: FAB_SIZE + dockPadding, onRevealed: highlightAdded });
+  useSeenItems({ rows, scrollRef, rowViews, markSeen: household.newItems.markSeen });
   const pendingSet = useMemo(() => new Set(pending), [pending]);
 
   const index = months.indexOf(month);
@@ -903,6 +1082,7 @@ export default function ListScreen() {
           item={row.item}
           group={row.group}
           pending={pendingSet.has(`items/${row.item.id}`)}
+          tint={row.tint}
           handlers={handlers}
           reorderMode={reorderMode}
         />

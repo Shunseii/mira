@@ -9,6 +9,7 @@ import { FONTS, SEPARATOR_HEIGHT, TAP } from "@/theme/tokens";
 import { GroupFill, GroupTile, useGroupTone } from "./GroupBadge";
 import { Icon } from "./Icon";
 import { HOLD_MS, PRESS_DELAY_MS, Tap, haptic } from "./Tap";
+import { NewItemTint, type RowTint } from "./NewItemTint";
 import { Text } from "./Text";
 
 /** How far rows (and their tint) reach past the page's content edge on each side. */
@@ -84,6 +85,8 @@ type ItemRowProps = {
   group?: Group;
   /** Lifted while being dragged: surface background and shadow, as in the design's mid-drag frame. */
   lifted?: boolean;
+  /** The new-item highlight (unchecked rows only). */
+  tint?: RowTint;
 };
 
 /** Drag handle: rendered by the list, which wires it to its drag gesture. */
@@ -113,7 +116,7 @@ export const GroupLine = ({ group, dimmed = false }: { group: Pick<Group, "name"
  * One item. Tapping anywhere on the row checks it off; the pencil edits it;
  * swiping it left deletes it; holding it starts reorder mode, where the grip drags it.
  */
-export const ItemRow = memo(({ item, pending, onPress, onLongPress, onDelete, onEdit, grip, group, lifted }: ItemRowProps) => {
+export const ItemRow = memo(({ item, pending, onPress, onLongPress, onDelete, onEdit, grip, group, lifted, tint }: ItemRowProps) => {
   const { colors } = useTheme();
   const checked = item.checkedAt !== undefined;
   const showUnits = usePref("showUnits");
@@ -153,6 +156,7 @@ export const ItemRow = memo(({ item, pending, onPress, onLongPress, onDelete, on
           never paints over the separator of the row above when rows land on fractional pixels. */}
           {lifted ? null : (
             <View pointerEvents="none" style={[styles.fill, { backgroundColor: colors.bg }]}>
+              <NewItemTint tint={tint} cleared={checked} color={colors.accentSoft} />
               <PressHighlight pressed={pressed} color={colors.surface2} />
             </View>
           )}
