@@ -23,7 +23,7 @@ import { useReducedMotion } from "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { HouseholdProvider, useOptionalHousehold } from "@/data/HouseholdProvider";
 import { loginStep, useSession } from "@/data/session";
-import { NO_TRANSITION, ROOT_FADE, pushTransition } from "@/lib/screenTransitions";
+import { NO_TRANSITION, ROOT_FADE, homeTransition, pushTransition } from "@/lib/screenTransitions";
 import { AppearanceTransitionProvider } from "@/theme/AppearanceTransition";
 import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
 
@@ -62,12 +62,12 @@ const Navigation = () => {
     <>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
       {/* The JS stack, not the native one, so pushes can run on a spring we tune (SPRING_SCREEN). */}
-      <Stack screenOptions={{ headerShown: false, cardStyle: { backgroundColor: colors.bg }, ...pushTransition({ reduceMotion }) }}>
+      <Stack screenOptions={{ headerShown: false, cardStyle: { backgroundColor: colors.bg }, ...pushTransition({ reduceMotion, background: colors.bg }) }}>
         <Stack.Protected guard={!signedIn}>
           <Stack.Screen name="login" options={ROOT_FADE} />
         </Stack.Protected>
         <Stack.Protected guard={signedIn}>
-          <Stack.Screen name="index" options={ROOT_FADE} />
+          <Stack.Screen name="index" options={homeTransition({ reduceMotion, background: colors.bg })} />
           {/* The list's + button morphs into this screen's Add button (FabMorph), so the stack doesn't animate it. */}
           <Stack.Screen name="add" options={{ ...NO_TRANSITION, presentation: "transparentModal", cardStyle: { backgroundColor: "transparent" } }} />
           <Stack.Screen name="item/[id]" />

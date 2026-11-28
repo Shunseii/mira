@@ -21,10 +21,17 @@ export const SPRING_TRAVEL = { mass: 1, stiffness: 750, damping: 52 } as const;
 export const SPRING_POP = { mass: 1, stiffness: 520, damping: 26 } as const;
 
 /**
- * Screen pushes and pops (and a swipe back's release): critically damped, so a pushed screen glides to a stop
- * with no bounce in about 480 ms. Drives React Navigation's Animated.spring, not Reanimated.
+ * A screen pushing in (and a cancelled swipe back springing home): damping ratio ≈ 0.79, so it reaches its place
+ * in about 215 ms, runs ≈ 1.6% past (6 pt on a phone), and is at rest by about 460 ms.
+ * Drives React Navigation's Animated.spring, not Reanimated.
  */
-export const SPRING_SCREEN = { mass: 1, stiffness: 320, damping: 36 } as const;
+export const SPRING_SCREEN = { mass: 1, stiffness: 360, damping: 30 } as const;
+
+/**
+ * A screen going back (button, system back, or a swipe released past halfway): critically damped, so the
+ * screen underneath grows back to full size without bobbing, in about 480 ms.
+ */
+export const SPRING_SCREEN_BACK = { mass: 1, stiffness: 320, damping: 36 } as const;
 
 /** Rows moving to a new place in a list: checked items sinking, neighbours closing the gap. */
 export const ROW_LAYOUT = LinearTransition.springify().mass(SPRING_SNAPPY.mass).stiffness(SPRING_SNAPPY.stiffness).damping(SPRING_SNAPPY.damping);
