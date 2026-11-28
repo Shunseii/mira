@@ -20,6 +20,7 @@ import { useAppUpdate, type UpdateStatus } from "@/data/appUpdate";
 import { setPrefs, useInstantPref, usePref, usePrefs, type CheckedItems, type GroupLabel } from "@/data/prefs";
 import { displayHost } from "@/data/server";
 import { updateSession, useSession } from "@/data/session";
+import { useTransitionSettled } from "@/lib/useTransitionSettled";
 import { useAppearanceTransition } from "@/theme/AppearanceTransition";
 import { useTheme } from "@/theme/ThemeProvider";
 import { ACCENTS, buildPalette, FONTS, type AccentName, type ThemeMode } from "@/theme/tokens";
@@ -348,6 +349,7 @@ export default function Settings() {
   const [groupLabel, setGroupLabel] = useInstantPref("groupLabel");
   const people = useStoreQuery((store) => liveUsers({ store }).map((person) => person.name), []);
   const groupCount = useStoreQuery((store) => liveGroups({ store }).length, []);
+  const settled = useTransitionSettled();
 
   return (
     <Screen>
@@ -447,22 +449,27 @@ export default function Settings() {
           <GroupLabelTile value="icon" label="Icon only" selected={groupLabel === "icon"} onSelect={() => setGroupLabel("icon")} />
         </View>
 
-        <AppSection />
+        {/* Below the fold on any phone, so it mounts once the screen has slid in. */}
+        {settled ? (
+          <>
+            <AppSection />
 
-        <Text variant="eyebrow" color="ink2" style={styles.section}>
-          Household
-        </Text>
-        <View>
-          <SettingsRow icon="server" label="Server" value={displayHost(serverUrl)} />
-          <SettingsRow icon="users-round" label="People" value={people.join(", ")} />
-          <SettingsRow
-            icon="tags"
-            label="Groups"
-            value={`${groupCount} group${groupCount === 1 ? "" : "s"}`}
-            onPress={() => router.push("/groups")}
-          />
-          <SettingsRow icon="log-out" label="Sign out of this phone" tone="danger" onPress={() => confirmSignOut.current?.present()} />
-        </View>
+            <Text variant="eyebrow" color="ink2" style={styles.section}>
+              Household
+            </Text>
+            <View>
+              <SettingsRow icon="server" label="Server" value={displayHost(serverUrl)} />
+              <SettingsRow icon="users-round" label="People" value={people.join(", ")} />
+              <SettingsRow
+                icon="tags"
+                label="Groups"
+                value={`${groupCount} group${groupCount === 1 ? "" : "s"}`}
+                onPress={() => router.push("/groups")}
+              />
+              <SettingsRow icon="log-out" label="Sign out of this phone" tone="danger" onPress={() => confirmSignOut.current?.present()} />
+            </View>
+          </>
+        ) : null}
       </Animated.ScrollView>
       <ConfirmSheet
         ref={confirmSwitch}

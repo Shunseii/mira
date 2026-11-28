@@ -1,6 +1,6 @@
 import { createGroup, deleteGroup, readGroup, restoreGroup, updateGroup } from "@mira/shared";
-import { useLocalSearchParams, useNavigation } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocalSearchParams } from "expo-router";
+import { useCallback, useRef, useState } from "react";
 import { StyleSheet, TextInput, View } from "react-native";
 import { KeyboardAwareScrollView, KeyboardStickyView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,6 +17,7 @@ import { Text } from "@/components/Text";
 import { useHousehold, useStoreQuery } from "@/data/HouseholdProvider";
 import { goBack } from "@/lib/navigation";
 import { offerUndo } from "@/lib/pendingUndo";
+import { useTransitionSettled } from "@/lib/useTransitionSettled";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS } from "@/theme/tokens";
 import { SquircleFill } from "@/components/Squircle";
@@ -41,17 +42,7 @@ export default function EditGroup() {
   const existing = useStoreQuery((store) => (isNew ? undefined : readGroup({ store, id })), [id, isNew]);
 
   // The icon grid fills in once the screen has slid in; drawing ~100 icons during the slide stalls it.
-  const navigation = useNavigation();
-  const [settled, setSettled] = useState(false);
-  useEffect(() => {
-    const settle = () => setSettled(true);
-    const unsubscribe = navigation.addListener("transitionEnd" as never, settle);
-    const fallback = setTimeout(settle, SETTLE_FALLBACK_MS);
-    return () => {
-      unsubscribe();
-      clearTimeout(fallback);
-    };
-  }, [navigation]);
+  const settled = useTransitionSettled();
   const [name, setName] = useState(existing?.name ?? "");
   // Raw stored key, so an icon from a newer build survives an edit here.
   const [icon, setIcon] = useState<string | undefined>(existing?.icon);
@@ -184,9 +175,6 @@ export default function EditGroup() {
     </Screen>
   );
 }
-
-/** In case the transition-end event never comes (e.g. no animation). */
-const SETTLE_FALLBACK_MS = 600;
 
 /** Room kept under a focused field so it never ends up behind the pinned Save button. */
 const FOOTER_SPACE = 100;

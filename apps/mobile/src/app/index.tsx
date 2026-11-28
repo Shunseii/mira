@@ -15,7 +15,7 @@ import {
   type MonthKey,
   type MonthView,
 } from "@mira/shared";
-import { router, useFocusEffect, useIsFocused } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AppState, BackHandler, RefreshControl, type ScrollView, StyleSheet, TextInput, View } from "react-native";
 import Animated, {
@@ -886,64 +886,68 @@ const useSeenItems = ({
     [markSeen],
   );
 
-  const focused = useIsFocused();
   const [active, setActive] = useState(AppState.currentState !== "background" && AppState.currentState !== "inactive");
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (next) => setActive(next === "active"));
     return () => subscription.remove();
   }, []);
 
-  useEffect(() => {
-    const since = onScreenSince.current;
-    // Leaving the screen is handled below (what's on screen then counts as seen), so only clear for the rest.
-    if (!focused) return undefined;
-    if (!active || waitingKey === "") {
-      since.clear();
-      return undefined;
-    }
-    let cancelled = false;
-    const tick = async () => {
-      const host = scrollRef.current?.getNativeScrollRef();
-      if (!host) return;
-      const ids = waitingRef.current;
-      const [listFrame, ...rowFrames] = await Promise.all([
-        frameInWindow(host),
-        ...ids.map((id) => {
-          const view = rowViews.current.get(id);
-          return view ? frameInWindow(view) : Promise.resolve(undefined);
-        }),
-      ]);
-      if (cancelled) return;
-      const now = Date.now();
-      const seen = new Set<string>();
-      ids.forEach((id, index) => {
-        const row = rowFrames[index];
-        const overlap = row ? Math.min(row.y + row.height, listFrame.y + listFrame.height) - Math.max(row.y, listFrame.y) : 0;
-        if (!row || row.height === 0 || overlap / row.height < SEEN_SHARE) {
-          since.delete(id);
-          return;
-        }
-        const from = since.get(id) ?? now;
-        since.set(id, from);
-        if (now - from >= SEEN_AFTER_MS) seen.add(id);
-      });
-      for (const id of since.keys()) if (!ids.includes(id)) since.delete(id);
-      markInListOrder(seen);
-    };
-    void tick();
-    const interval = setInterval(() => void tick(), SEEN_TICK_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [active, focused, markInListOrder, rowViews, scrollRef, waitingKey]);
+  // A focus effect rather than useIsFocused: that re-renders the whole list on every push and pop, in the same
+  // render as the screen being opened, which holds up the start of the transition.
+  useFocusEffect(
+    useCallback(() => {
+      const since = onScreenSince.current;
+      if (!active || waitingKey === "") {
+        since.clear();
+        return undefined;
+      }
+      let cancelled = false;
+      const tick = async () => {
+        const host = scrollRef.current?.getNativeScrollRef();
+        if (!host) return;
+        const ids = waitingRef.current;
+        const [listFrame, ...rowFrames] = await Promise.all([
+          frameInWindow(host),
+          ...ids.map((id) => {
+            const view = rowViews.current.get(id);
+            return view ? frameInWindow(view) : Promise.resolve(undefined);
+          }),
+        ]);
+        if (cancelled) return;
+        const now = Date.now();
+        const seen = new Set<string>();
+        ids.forEach((id, index) => {
+          const row = rowFrames[index];
+          const overlap = row ? Math.min(row.y + row.height, listFrame.y + listFrame.height) - Math.max(row.y, listFrame.y) : 0;
+          if (!row || row.height === 0 || overlap / row.height < SEEN_SHARE) {
+            since.delete(id);
+            return;
+          }
+          const from = since.get(id) ?? now;
+          since.set(id, from);
+          if (now - from >= SEEN_AFTER_MS) seen.add(id);
+        });
+        for (const id of since.keys()) if (!ids.includes(id)) since.delete(id);
+        markInListOrder(seen);
+      };
+      void tick();
+      const interval = setInterval(() => void tick(), SEEN_TICK_MS);
+      return () => {
+        cancelled = true;
+        clearInterval(interval);
+      };
+    }, [active, markInListOrder, rowViews, scrollRef, waitingKey]),
+  );
 
   // Leaving the list counts as seeing what was on screen (as of the last check, at most a tick ago).
   useFocusEffect(
     useCallback(
       () => () => {
-        markInListOrder(new Set(onScreenSince.current.keys()));
+        const onScreen = new Set(onScreenSince.current.keys());
         onScreenSince.current.clear();
+        if (onScreen.size === 0) return;
+        // Marking re-renders the list, so wait until the next screen's transition has started.
+        requestAnimationFrame(() => setTimeout(() => markInListOrder(onScreen), 0));
       },
       [markInListOrder],
     ),
