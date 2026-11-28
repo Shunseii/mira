@@ -46,6 +46,7 @@ export const buildMonthView = ({
   search = "",
   checkedLast = true,
   checkedApart = false,
+  heldPlaces,
 }: {
   store: Store;
   month: MonthKey;
@@ -54,12 +55,18 @@ export const buildMonthView = ({
   checkedLast?: boolean;
   /** Checked items leave their groups (and the priority list) for a separate `checked` list. */
   checkedApart?: boolean;
+  /**
+   * Items just checked or unchecked whose place still follows their old state (item id → checked then), so they
+   * stay put for a moment before moving. Only their place: counts and the items themselves are current.
+   */
+  heldPlaces?: ReadonlyMap<string, boolean>;
 }): MonthView => {
   const query = normalizeName(search);
   const all = liveItemsOf({ store, month });
   const matching = all.filter((item) => matches({ item, query }));
-  const checked = checkedApart ? matching.filter((item) => item.checkedAt !== undefined).sort(byPosition) : [];
-  const visible = checkedApart ? matching.filter((item) => item.checkedAt === undefined) : matching;
+  const placedAsChecked = (item: Item): boolean => heldPlaces?.get(item.id) ?? item.checkedAt !== undefined;
+  const checked = checkedApart ? matching.filter(placedAsChecked).sort(byPosition) : [];
+  const visible = checkedApart ? matching.filter((item) => !placedAsChecked(item)) : matching;
   const groups = liveGroups({ store });
   const liveGroupIds = new Set(groups.map((group) => group.id));
   const sectionKeyOf = (item: Item): string => (item.groupId && liveGroupIds.has(item.groupId) ? item.groupId : UNGROUPED_KEY);
@@ -68,8 +75,8 @@ export const buildMonthView = ({
   const inListOrder = (items: Item[]): Item[] =>
     checkedLast
       ? [
-          ...items.filter((item) => item.checkedAt === undefined).sort(byPosition),
-          ...items.filter((item) => item.checkedAt !== undefined).sort(byPosition),
+          ...items.filter((item) => !placedAsChecked(item)).sort(byPosition),
+          ...items.filter(placedAsChecked).sort(byPosition),
         ]
       : [...items].sort(byPosition);
 

@@ -3,7 +3,7 @@ import { Text as RNText, type TextProps, type TextStyle } from "react-native";
 import { useTheme } from "@/theme/ThemeProvider";
 import { FONTS, type Palette } from "@/theme/tokens";
 
-const VARIANTS = {
+export const TEXT_VARIANTS = {
   hero: { fontFamily: FONTS.displayBold, fontSize: 36, lineHeight: 44 },
   display: { fontFamily: FONTS.display, fontSize: 30, lineHeight: 38 },
   title: { fontFamily: FONTS.displayBold, fontSize: 22, lineHeight: 28 },
@@ -20,7 +20,7 @@ const VARIANTS = {
   wordmarkHero: { fontFamily: FONTS.arabic, fontSize: 60, lineHeight: 104, textAlign: "left", alignSelf: "flex-start" },
 } satisfies Record<string, TextStyle>;
 
-export type TextVariant = keyof typeof VARIANTS;
+export type TextVariant = keyof typeof TEXT_VARIANTS;
 
 export type MiraTextProps = TextProps & {
   variant?: TextVariant;
@@ -30,5 +30,5 @@ export type MiraTextProps = TextProps & {
 
 export const Text = ({ variant = "body", color = "ink", style, ...rest }: MiraTextProps) => {
   const { colors } = useTheme();
-  return <RNText {...rest} style={[VARIANTS[variant], { color: colors[color] }, style]} />;
+  return <RNText {...rest} style={[TEXT_VARIANTS[variant], { color: colors[color] }, style]} />;
 };

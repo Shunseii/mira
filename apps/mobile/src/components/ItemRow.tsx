@@ -1,7 +1,22 @@
 import { formatQuantity, isGroupIcon, type Group, type Item } from "@mira/shared";
-import { memo, useEffect, useState, type ReactNode } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
-import Animated, { LayoutAnimationConfig, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
+import { memo, useEffect, useRef, useState, type ReactNode } from "react";
+import { Pressable, StyleSheet, View, type StyleProp, type TextProps, type TextStyle } from "react-native";
+import Animated, {
+  Easing,
+  interpolate,
+  interpolateColor,
+  ReduceMotion,
+  type SharedValue,
+  useAnimatedProps,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withDelay,
+  withSpring,
+  withTiming,
+  type WithTimingConfig,
+} from "react-native-reanimated";
+import Svg, { Path } from "react-native-svg";
 import { usePref } from "@/data/prefs";
 import { SPRING_POP } from "@/theme/motion";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -10,14 +25,11 @@ import { GroupFill, GroupTile, useGroupTone } from "./GroupBadge";
 import { Icon } from "./Icon";
 import { NewItemTint, type RowTint } from "./NewItemTint";
 import { HOLD_MS, PRESS_DELAY_MS, haptic } from "./Tap";
-import { Text } from "./Text";
+import { Text, TEXT_VARIANTS, type TextVariant } from "./Text";
 import { IconTap, SMALL_ICON_WASH } from "./PressWash";
 
 /** How far rows (and their tint) reach past the page's content edge on each side. */
 export const ROW_INSET = 12;
-
-const CHECK_START_SCALE = 0.6;
-const CHECK_FADE_MS = 120;
 
 /** Shows quickly when a finger lands (after the press delay) and fades out gently on release. */
 const PRESS_IN_MS = 90;
@@ -39,32 +51,141 @@ const PressHighlight = ({ pressed, color }: { pressed: boolean; color: string })
   return used ? <PressFade pressed={pressed} color={color} /> : null;
 };
 
-/**
- * The check pops in on a spring (a touch past full size, then settles) with a short fade. It is mounted
- * only while the item is checked, so what's on screen always follows the data: an animation that gets cut
- * short (the app frozen in the background mid-sync, say) can't leave a checked item looking unchecked.
- * Unchecking removes it at once for the same reason.
- */
-const checkIn = () => {
-  "worklet";
-  return {
-    initialValues: { opacity: 0, transform: [{ scale: CHECK_START_SCALE }] },
-    animations: { opacity: withTiming(1, { duration: CHECK_FADE_MS }), transform: [{ scale: withSpring(1, SPRING_POP) }] },
-  };
+const CHECK_START_SCALE = 0.6;
+/** Lucide's check, drawn from its short stroke up to the long one. */
+const TICK_PATH = "M20 6 9 17l-5-5";
+/** A touch over the path's length (22.6 in its 24-unit box), so a fully undrawn tick shows nothing. */
+const TICK_LENGTH = 23;
+
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
+const EASE_IN = Easing.bezier(0.5, 0, 0.75, 0);
+type Step = { duration: number; easing: NonNullable<WithTimingConfig["easing"]>; delay: number };
+const timed = ({ duration, easing, delay = 0 }: Omit<Step, "delay"> & { delay?: number }): Step => ({ duration, easing, delay });
+
+/** Check: the fill pops, the tick draws, the line strikes through the name, the text greys. Uncheck runs it back, quicker and without the bounce. */
+const CHECK = {
+  fillOpacity: timed({ duration: 100, easing: Easing.out(Easing.quad) }),
+  tick: timed({ duration: 220, easing: EASE_OUT, delay: 70 }),
+  strike: timed({ duration: 260, easing: EASE_OUT, delay: 90 }),
+  tone: timed({ duration: 200, easing: Easing.out(Easing.quad) }),
+};
+const UNCHECK = {
+  fill: timed({ duration: 200, easing: EASE_IN }),
+  fillOpacity: timed({ duration: 140, easing: Easing.in(Easing.quad), delay: 60 }),
+  tick: timed({ duration: 120, easing: EASE_IN }),
+  strike: timed({ duration: 160, easing: EASE_IN }),
+  tone: timed({ duration: 200, easing: Easing.out(Easing.quad) }),
+};
+/** Reduced motion: no scaling or drawing, the fill and the line fade. */
+const REDUCED_FADE = timed({ duration: 150, easing: Easing.out(Easing.quad) });
+
+const animateTo = ({ to, delay, duration, easing }: Step & { to: number }) =>
+  withDelay(delay, withTiming(to, { duration, easing, reduceMotion: ReduceMotion.Never }), ReduceMotion.Never);
+
+type CheckMotion = {
+  /** 0 → 1 drives the fill's scale (0.6 → 1); the spring overshoots past 1 for the pop. */
+  fill: SharedValue<number>;
+  fillOpacity: SharedValue<number>;
+  tick: SharedValue<number>;
+  strike: SharedValue<number>;
+  /** Text and outline colour: 0 as unchecked, 1 as checked. */
+  tone: SharedValue<number>;
+  reduceMotion: boolean;
 };
 
-const Checkbox = ({ checked }: { checked: boolean }) => {
+/**
+ * One set of values per row that stays mounted and follows `checked`, so both directions animate and a row that
+ * re-renders or moves keeps playing. A row that mounts already checked (opening the list, scrolling) starts at the end.
+ */
+const useCheckMotion = (checked: boolean): CheckMotion => {
+  const reduceMotion = useReducedMotion();
+  const start = checked ? 1 : 0;
+  const fill = useSharedValue(start);
+  const fillOpacity = useSharedValue(start);
+  const tick = useSharedValue(start);
+  const strike = useSharedValue(start);
+  const tone = useSharedValue(start);
+  const shown = useRef(checked);
+
+  useEffect(() => {
+    if (shown.current === checked) return;
+    shown.current = checked;
+    const to = checked ? 1 : 0;
+    if (reduceMotion) {
+      fill.set(1);
+      tick.set(to);
+      fillOpacity.set(animateTo({ to, ...REDUCED_FADE }));
+      strike.set(animateTo({ to, ...REDUCED_FADE }));
+      tone.set(animateTo({ to, ...CHECK.tone }));
+      return;
+    }
+    const steps = checked ? CHECK : UNCHECK;
+    fill.set(checked ? withSpring(1, { ...SPRING_POP, reduceMotion: ReduceMotion.Never }) : animateTo({ to, ...UNCHECK.fill }));
+    fillOpacity.set(animateTo({ to, ...steps.fillOpacity }));
+    tick.set(animateTo({ to, ...steps.tick }));
+    strike.set(animateTo({ to, ...steps.strike }));
+    tone.set(animateTo({ to, ...steps.tone }));
+  }, [checked, fill, fillOpacity, reduceMotion, strike, tick, tone]);
+
+  return { fill, fillOpacity, tick, strike, tone, reduceMotion };
+};
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
+const Checkbox = ({ motion }: { motion: CheckMotion }) => {
   const { colors } = useTheme();
+  const { fill, fillOpacity, tick, tone, reduceMotion } = motion;
+  const boxStyle = useAnimatedStyle(() => ({ borderColor: interpolateColor(tone.value, [0, 1], [colors.ink3, colors.accent]) }));
+  const fillStyle = useAnimatedStyle(() => ({
+    opacity: fillOpacity.value,
+    transform: [{ scale: reduceMotion ? 1 : interpolate(fill.value, [0, 1], [CHECK_START_SCALE, 1]) }],
+  }));
+  const tickProps = useAnimatedProps(() => ({ strokeDashoffset: -TICK_LENGTH * (1 - tick.value) }));
   return (
-    <View style={[styles.checkbox, { borderColor: checked ? colors.accent : colors.ink3 }]}>
-      {/* Rows that mount already checked (opening the list, scrolling) show the check without the pop. */}
-      <LayoutAnimationConfig skipEntering>
-        {checked ? (
-          <Animated.View entering={checkIn} style={[styles.checkFill, { backgroundColor: colors.accent }]}>
-            <Icon name="check" size={16} color={colors.onAccent} strokeWidth={3} />
-          </Animated.View>
-        ) : null}
-      </LayoutAnimationConfig>
+    <Animated.View style={[styles.checkbox, boxStyle]}>
+      <Animated.View pointerEvents="none" style={[styles.checkFill, { backgroundColor: colors.accent }, fillStyle]}>
+        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+          <AnimatedPath
+            d={TICK_PATH}
+            stroke={colors.onAccent}
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeDasharray={[TICK_LENGTH, TICK_LENGTH]}
+            animatedProps={tickProps}
+          />
+        </Svg>
+      </Animated.View>
+    </Animated.View>
+  );
+};
+
+/** Text whose colour eases between its unchecked and checked inks with the row's check. */
+const ToneText = ({
+  tone,
+  from,
+  to,
+  variant,
+  style,
+  ...rest
+}: Omit<TextProps, "style"> & { tone: SharedValue<number>; from: string; to: string; variant: TextVariant; style?: StyleProp<TextStyle> }) => {
+  const colorStyle = useAnimatedStyle(() => ({ color: interpolateColor(tone.value, [0, 1], [from, to]) }));
+  return <Animated.Text {...rest} style={[TEXT_VARIANTS[variant], style, colorStyle]} />;
+};
+
+/** The item's name with a line drawn through it from the left. Sized to the name as shown, so an ellipsized name is struck only as far as it reaches. */
+const StruckName = ({ name, motion }: { name: string; motion: CheckMotion }) => {
+  const { colors } = useTheme();
+  const { strike, tone, reduceMotion } = motion;
+  const strikeStyle = useAnimatedStyle(() =>
+    reduceMotion ? { opacity: strike.value, transform: [{ scaleX: 1 }] } : { opacity: strike.value > 0 ? 1 : 0, transform: [{ scaleX: strike.value }] },
+  );
+  return (
+    <View style={styles.name}>
+      <ToneText tone={tone} from={colors.ink} to={colors.ink3} variant="body" numberOfLines={1}>
+        {name}
+      </ToneText>
+      <Animated.View pointerEvents="none" style={[styles.strike, { backgroundColor: colors.ink3 }, strikeStyle]} />
     </View>
   );
 };
@@ -126,6 +247,7 @@ export const ItemRow = memo(({ item, pending, onPress, onLongPress, onDelete, on
   // One line on the list; the full note stays on Item detail.
   const note = item.note?.replace(/\s+/g, " ").trim() || undefined;
   const badge = group && groupLabel === "name" ? group : undefined;
+  const motion = useCheckMotion(checked);
   return (
     <Pressable
       accessibilityRole="button"
@@ -163,13 +285,11 @@ export const ItemRow = memo(({ item, pending, onPress, onLongPress, onDelete, on
           )}
           {lifted ? null : <View pointerEvents="none" style={[styles.separator, { backgroundColor: colors.line }]} />}
           <View style={styles.checkTarget}>
-            <Checkbox checked={checked} />
+            <Checkbox motion={motion} />
           </View>
           <View style={styles.label}>
             <View style={styles.nameRow}>
-              <Text variant="body" color={checked ? "ink3" : "ink"} numberOfLines={1} style={styles.name}>
-                {item.name}
-              </Text>
+              <StruckName name={item.name} motion={motion} />
 
               {group && groupLabel === "icon" ? <GroupTile group={group} dimmed={checked} /> : null}
               {pending ? (
@@ -179,15 +299,15 @@ export const ItemRow = memo(({ item, pending, onPress, onLongPress, onDelete, on
             {/* Then the group badge (By priority, Name labels) and the note (up to two lines), each on its own line. */}
             {badge ? <GroupLine group={badge} dimmed={checked} /> : null}
             {note ? (
-              <Text variant="caption" color={checked ? "ink3" : "ink2"} numberOfLines={2} ellipsizeMode="tail">
+              <ToneText tone={motion.tone} from={colors.ink2} to={colors.ink3} variant="caption" numberOfLines={2} ellipsizeMode="tail">
                 {note}
-              </Text>
+              </ToneText>
             ) : null}
           </View>
           {quantity ? (
-            <Text variant="secondary" color={checked ? "ink3" : "ink2"} style={styles.quantity}>
+            <ToneText tone={motion.tone} from={colors.ink2} to={colors.ink3} variant="secondary" style={styles.quantity}>
               {quantity}
-            </Text>
+            </ToneText>
           ) : null}
           {onEdit ? (
             <IconTap
@@ -268,7 +388,9 @@ const styles = StyleSheet.create({
   },
   groupName: { fontFamily: FONTS.bodyBold, flexShrink: 1 },
   dimmed: { opacity: 0.6 },
-  name: { flexShrink: 1 },
+  name: { flexShrink: 1, justifyContent: "center" },
+  /** Just under the middle of the line box, where lowercase letters sit. */
+  strike: { position: "absolute", left: 0, right: 0, top: "50%", marginTop: 0.5, height: 1.5, borderRadius: 1, transformOrigin: "left" },
   quantity: { marginLeft: 12 },
   trailing: {
     width: 44,

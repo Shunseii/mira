@@ -29,8 +29,10 @@ import Animated, {
   useAnimatedRef,
   useAnimatedScrollHandler,
   useAnimatedStyle,
+  ReduceMotion,
   useSharedValue,
   type SharedValue,
+  withDelay,
   withSpring,
   withTiming,
 } from "react-native-reanimated";
@@ -67,7 +69,7 @@ import type { UnseenItems } from "@/data/newItems";
 import { updateSession, useSession } from "@/data/session";
 import { takeAddedItems } from "@/lib/addedItems";
 import { setExpandOrigin, useOriginHidden } from "@/lib/expandOrigin";
-import { useExternalStore } from "@/lib/externalStore";
+import { createExternalStore, useExternalStore } from "@/lib/externalStore";
 import { createStabilizer } from "@/lib/stableRows";
 import { ROW_LAYOUT, SPRING_SNAPPY } from "@/theme/motion";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -148,7 +150,17 @@ type HeaderRow = {
  * `hidden`: filtered out by the search. `inChecked`: in the Checked section, which folds on the UI thread.
  * Both stay mounted, so clearing the search or unfolding Checked is only a style change, not mounting rows.
  */
-type ItemRowData = { kind: "item"; key: string; item: Item; group?: Group; hidden?: boolean; inChecked?: boolean; tint?: RowTint };
+type ItemRowData = {
+  kind: "item";
+  key: string;
+  item: Item;
+  group?: Group;
+  hidden?: boolean;
+  inChecked?: boolean;
+  tint?: RowTint;
+  /** Just checked, held in its group for a moment before it moves into the Checked section. */
+  leaving?: boolean;
+};
 type Row = HeaderRow | ItemRowData;
 
 const buildRows = ({ view, listView, groupsById }: { view: MonthView; listView: ListView; groupsById: Map<string, Group> }): Row[] => [
@@ -344,34 +356,111 @@ const WARM_FOLDED_AFTER_MS = 1000;
 /** Long enough for that layout pass to land. */
 const WARM_FOLDED_FOR_MS = 100;
 
+/** How long a row stays put after it's checked or unchecked, so its check plays where it was tapped before the row moves. */
+const CHECK_HOLD_MS = 350;
+/** A row headed into a folded Checked section fades out for this long after the hold, then leaves. */
+const FOLD_AWAY_MS = 160;
+const FOLD_AWAY_RETURN_MS = 120;
+
 /**
- * A row in Checked. It folds on the UI thread from a shared value, so folding or unfolding Checked
- * doesn't re-render the list.
- *
- * Unfolding shows the rows at once and they spring down out of the header (ROW_LAYOUT). Folding is
- * the same in reverse: each row springs up under the header, then leaves the flow.
- *
- * While `warming`, folded rows are laid out out of the flow and invisible (see WARM_FOLDED_AFTER_MS).
+ * Keeps just-checked (and unchecked) rows where they were for a moment: their place follows the state they had
+ * before (see buildMonthView's `heldPlaces`) until the hold ends. A row tapped again mid-hold keeps its original
+ * place and starts a fresh hold. An external store rather than state, so a hold and the write after it reach the
+ * list in the same render however the tap arrived (a state update from a gesture callback can land a render later,
+ * showing the row jump away and back).
  */
-const CheckedRow = ({
+const useHeldPlaces = () => {
+  const [held] = useState(() => createExternalStore<ReadonlyMap<string, boolean>>(new Map()));
+  const heldPlaces = useExternalStore(held);
+  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  useEffect(() => {
+    const pending = timers.current;
+    return () => pending.forEach(clearTimeout);
+  }, []);
+  const hold = useCallback(
+    ({ items, forMs }: { items: { id: string; wasChecked: boolean }[]; forMs: number }) => {
+      if (items.length === 0) return;
+      held.set((previous) => {
+        const next = new Map(previous);
+        for (const { id, wasChecked } of items) if (!next.has(id)) next.set(id, wasChecked);
+        return next;
+      });
+      for (const { id } of items) {
+        clearTimeout(timers.current.get(id));
+        timers.current.set(
+          id,
+          setTimeout(() => {
+            timers.current.delete(id);
+            held.set((previous) => {
+              if (!previous.has(id)) return previous;
+              const next = new Map(previous);
+              next.delete(id);
+              return next;
+            });
+          }, forMs),
+        );
+      }
+    },
+    [held],
+  );
+  return { heldPlaces, hold };
+};
+
+/** How long to hold rows whose checked state is about to change to `checked`, given where checked items go. */
+const holdFor = (checked: boolean): number | undefined => {
+  const mode = getPref("checkedItems");
+  if (mode === "stay") return undefined;
+  // Rows in a folded Checked section aren't on screen, so an undo brings them back without waiting.
+  if (mode === "section" && getPref("checkedCollapsed")) return checked ? CHECK_HOLD_MS + FOLD_AWAY_MS : undefined;
+  return CHECK_HOLD_MS;
+};
+
+/**
+ * Every item row's cell, the same component whether the row is in its group or in Checked, so a row moving
+ * between them stays mounted (and its check keeps playing).
+ *
+ * In Checked, it folds on the UI thread from a shared value, so folding or unfolding Checked doesn't re-render
+ * the list. Unfolding shows the rows at once and they spring down out of the header (ROW_LAYOUT). Folding is
+ * the same in reverse: each row springs up under the header, then leaves the flow. While `warming`, folded rows
+ * are laid out out of the flow and invisible (see WARM_FOLDED_AFTER_MS).
+ *
+ * `leaving`: just checked and headed into Checked. If Checked is folded, the row fades out at the end of its hold.
+ */
+const ItemCell = ({
   fold,
   warming,
   anchor,
+  inChecked,
   hidden,
+  leaving,
+  itemKey,
+  onView,
   children,
 }: {
   fold: Fold;
   warming: SharedValue<boolean>;
   anchor: AnimatedRef<Animated.View>;
+  inChecked: boolean;
   hidden: boolean;
+  leaving: boolean;
+  itemKey: string;
+  /** Rows outside Checked report their view, for scrolling to added items and telling when they've been seen. */
+  onView?: (key: string, view: View | null) => void;
   children: ReactNode;
 }) => {
   const collapsed = usePref("checkedCollapsed");
   const row = useAnimatedRef<Animated.View>();
+  const setRef = useCallback(
+    (view: Animated.View | null) => {
+      row(view);
+      onView?.(itemKey, view);
+    },
+    [itemKey, onView, row],
+  );
   // How far below the Checked header this row sat when folding began.
   const distance = useSharedValue(0);
   useAnimatedReaction(
-    () => fold.value > 0,
+    () => inChecked && fold.value > 0,
     (folding, wasFolding) => {
       if (!folding || wasFolding !== false) return;
       const self = measure(row);
@@ -379,7 +468,20 @@ const CheckedRow = ({
       distance.set(self && header ? Math.max(0, self.pageY - (header.pageY + header.height)) : 0);
     },
   );
-  const foldStyle = useAnimatedStyle(() => {
+  const fadeAway = useSharedValue(0);
+  useEffect(() => {
+    if (leaving && !inChecked && fold.get() >= 1) {
+      fadeAway.set(withDelay(CHECK_HOLD_MS, withTiming(1, { duration: FOLD_AWAY_MS, reduceMotion: ReduceMotion.Never })));
+    } else if (fadeAway.get() > 0) {
+      fadeAway.set(inChecked ? 0 : withTiming(0, { duration: FOLD_AWAY_RETURN_MS, reduceMotion: ReduceMotion.Never }));
+    }
+  }, [fadeAway, fold, inChecked, leaving]);
+  const cellStyle = useAnimatedStyle(() => {
+    if (!inChecked) {
+      return hidden
+        ? { display: "none", position: "relative", opacity: 1, transform: [{ translateY: 0 }] }
+        : { display: "flex", position: "relative", opacity: 1 - fadeAway.value, transform: [{ translateY: 0 }] };
+    }
     const progress = fold.value;
     if (!hidden && progress >= 1 && warming.value) {
       return { display: "flex", position: "absolute", left: 0, right: 0, top: 0, opacity: 0, transform: [{ translateY: 0 }] };
@@ -393,14 +495,15 @@ const CheckedRow = ({
       transform: [{ translateY: -progress * distance.value }],
     };
   });
+  const tucked = inChecked && collapsed;
   return (
     <Animated.View
-      ref={row}
-      style={foldStyle}
+      ref={setRef}
+      style={cellStyle}
       // Keeps taps and screen readers off folded rows while they're laid out to warm up.
-      pointerEvents={collapsed ? "none" : "auto"}
-      importantForAccessibility={collapsed ? "no-hide-descendants" : "auto"}
-      accessibilityElementsHidden={collapsed}
+      pointerEvents={tucked ? "none" : "auto"}
+      importantForAccessibility={tucked ? "no-hide-descendants" : "auto"}
+      accessibilityElementsHidden={tucked}
     >
       {children}
     </Animated.View>
@@ -879,17 +982,18 @@ export default function ListScreen() {
     return () => timers.forEach(clearTimeout);
   }, [foldWarming]);
 
+  const { heldPlaces, hold } = useHeldPlaces();
   const view = useStoreQuery(
-    (store) => buildMonthView({ store, month, checkedLast: checkedItems !== "stay", checkedApart: checkedItems === "section" }),
-    [month, checkedItems],
+    (store) => buildMonthView({ store, month, checkedLast: checkedItems !== "stay", checkedApart: checkedItems === "section", heldPlaces }),
+    [month, checkedItems, heldPlaces],
   );
   const searching = search.trim() !== "";
   const searchView = useStoreQuery(
     (store) =>
       searching
-        ? buildMonthView({ store, month, search, checkedLast: checkedItems !== "stay", checkedApart: checkedItems === "section" })
+        ? buildMonthView({ store, month, search, checkedLast: checkedItems !== "stay", checkedApart: checkedItems === "section", heldPlaces })
         : undefined,
-    [month, search, searching, checkedItems],
+    [month, search, searching, checkedItems, heldPlaces],
   );
   const groups = useStoreQuery((store) => liveGroups({ store }), []);
   const groupsById = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups]);
@@ -914,14 +1018,16 @@ export default function ListScreen() {
     return built.map((row) => {
       if (row.kind !== "item") return row;
       const tint = tints.get(row.key);
+      const leaving = !row.inChecked && row.item.checkedAt !== undefined && heldPlaces.get(row.key) === false;
       return {
         ...row,
+        leaving,
         item: stableItem(row.item.id, row.item),
         group: row.group && stableGroup(row.group.id, row.group),
         tint: tint && stableTint(row.key, tint),
       };
     });
-  }, [groupsById, listView, ownTints, searchView, stableGroup, stableItem, stableTint, unseen, view]);
+  }, [groupsById, heldPlaces, listView, ownTints, searchView, stableGroup, stableItem, stableTint, unseen, view]);
   const nothingShown = rows.every((row) => row.hidden);
 
   const scrollRef = useRef<ScrollView>(null);
@@ -930,13 +1036,10 @@ export default function ListScreen() {
     scrollOffset.set(event.contentOffset.y);
   });
   const rowViews = useRef(new Map<string, View>());
-  const trackRow = useCallback(
-    (key: string) => (view: View | null) => {
-      if (view) rowViews.current.set(key, view);
-      else rowViews.current.delete(key);
-    },
-    [],
-  );
+  const trackRow = useCallback((key: string, view: View | null) => {
+    if (view) rowViews.current.set(key, view);
+    else rowViews.current.delete(key);
+  }, []);
   const dockPadding = Math.max(insets.bottom, 16) + 8;
   const ownTintTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const highlightAdded = useCallback((itemIds: string[]) => {
@@ -1005,6 +1108,8 @@ export default function ListScreen() {
       onPress: (item) => {
         if (!userId) return;
         const checking = item.checkedAt === undefined;
+        const holdMs = holdFor(checking);
+        if (holdMs !== undefined) hold({ items: [{ id: item.id, wasChecked: !checking }], forMs: holdMs });
         household.write((store) => setChecked({ store, itemId: item.id, userId, checked: checking }));
         setUndo((offer) => {
           if (checking) {
@@ -1029,7 +1134,7 @@ export default function ListScreen() {
       },
       onEdit: (item) => router.push({ pathname: "/item/[id]", params: { id: item.id } }),
     }),
-    [household, startReordering, userId],
+    [hold, household, startReordering, userId],
   );
 
   const checkAll = useCallback(
@@ -1039,11 +1144,13 @@ export default function ListScreen() {
       const { store } = household;
       const changing = row.itemIds.filter((id) => (store.getCell(TABLES.items, id, "checked_at") !== undefined) !== checked);
       if (changing.length === 0) return;
+      const holdMs = holdFor(checked);
+      if (holdMs !== undefined) hold({ items: changing.map((id) => ({ id, wasChecked: !checked })), forMs: holdMs });
       household.write((store) => setCheckedMany({ store, itemIds: changing, userId, checked }));
       haptic(checked ? "success" : "light");
       setUndo({ kind: "checkAll", itemIds: changing, checked, title: row.title });
     },
-    [household, userId],
+    [hold, household, userId],
   );
 
   // Add item grows out of the + button, so it needs to know where the button is.
@@ -1068,6 +1175,8 @@ export default function ListScreen() {
     if (!userId) return;
     const itemIds = undo.kind === "check" ? undo.items.map((item) => item.id) : undo.itemIds;
     const checked = undo.kind === "checkAll" ? !undo.checked : false;
+    const holdMs = holdFor(checked);
+    if (holdMs !== undefined) hold({ items: itemIds.map((id) => ({ id, wasChecked: !checked })), forMs: holdMs });
     household.write((store) => setCheckedMany({ store, itemIds, userId, checked }));
   };
 
@@ -1107,14 +1216,19 @@ export default function ListScreen() {
           reorderMode={reorderMode}
         />
       );
-      return row.inChecked ? (
-        <CheckedRow fold={fold} warming={foldWarming} anchor={foldAnchor} hidden={row.hidden === true}>
+      return (
+        <ItemCell
+          fold={fold}
+          warming={foldWarming}
+          anchor={foldAnchor}
+          inChecked={row.inChecked === true}
+          hidden={row.hidden === true}
+          leaving={row.leaving === true}
+          itemKey={row.key}
+          onView={row.inChecked ? undefined : trackRow}
+        >
           {item}
-        </CheckedRow>
-      ) : (
-        <View ref={trackRow(row.key)} style={row.hidden && styles.folded}>
-          {item}
-        </View>
+        </ItemCell>
       );
     },
     [checkAll, fold, foldAnchor, foldWarming, handlers, pendingSet, reorderMode, toggleChecked, trackRow],

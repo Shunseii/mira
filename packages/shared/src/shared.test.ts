@@ -242,6 +242,31 @@ describe("month view", () => {
     expect(inline.priority.map((item) => item.name)).toEqual(["Eggs", "Milk", "Rice"]);
   });
 
+  it("keeps held items where their old checked state put them", () => {
+    const store = newStore();
+    const apples = addItem({ store, month: NOV, userId: "u1", item: { name: "Apples" } });
+    addItem({ store, month: NOV, userId: "u1", item: { name: "Bananas" } });
+    const cherries = addItem({ store, month: NOV, userId: "u1", item: { name: "Cherries" } });
+    setCheckedMany({ store, itemIds: [apples, cherries], userId: "u1", checked: true });
+    setCheckedMany({ store, itemIds: [cherries], userId: "u1", checked: false });
+    const heldPlaces = new Map([
+      [apples, false],
+      [cherries, true],
+    ]);
+
+    const names = (items: { name: string }[] | undefined) => items?.map((item) => item.name);
+    expect(names(buildMonthView({ store, month: NOV }).sections[0]?.items)).toEqual(["Bananas", "Cherries", "Apples"]);
+    const held = buildMonthView({ store, month: NOV, heldPlaces });
+    expect(names(held.sections[0]?.items)).toEqual(["Apples", "Bananas", "Cherries"]);
+    expect(held.sections[0]?.remaining).toBe(2);
+    expect(held.leftCount).toBe(2);
+
+    const apart = buildMonthView({ store, month: NOV, checkedApart: true, heldPlaces });
+    expect(names(apart.sections[0]?.items)).toEqual(["Apples", "Bananas"]);
+    expect(names(apart.checked)).toEqual(["Cherries"]);
+    expect(apart.checked[0]?.checkedAt).toBeUndefined();
+  });
+
   it("puts new items at the top when asked, and at the bottom by default", () => {
     const store = newStore();
     addItem({ store, month: NOV, userId: "u1", item: { name: "A" } });
