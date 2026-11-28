@@ -10,7 +10,7 @@ import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { useFonts } from "expo-font";
 import * as QuickActions from "expo-quick-actions";
 import { useQuickActionRouting } from "expo-quick-actions/router";
-import { Stack } from "expo-router";
+import { Stack } from "expo-router/js-stack";
 import { GROUP_ICON_FONT } from "@/components/groupIconGlyphs";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
@@ -19,9 +19,11 @@ import { useEffect } from "react";
 import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
+import { useReducedMotion } from "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { HouseholdProvider, useOptionalHousehold } from "@/data/HouseholdProvider";
 import { loginStep, useSession } from "@/data/session";
+import { NO_TRANSITION, ROOT_FADE, pushTransition } from "@/lib/screenTransitions";
 import { AppearanceTransitionProvider } from "@/theme/AppearanceTransition";
 import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
 
@@ -33,6 +35,7 @@ const Navigation = () => {
   const { colors, scheme } = useTheme();
   const signedIn = loginStep(useSession()) === "done";
   const household = useOptionalHousehold();
+  const reduceMotion = useReducedMotion();
   // Signed-in screens read the local store, which loads asynchronously from disk.
   // Keep the splash up until it has (a few ms), instead of rendering without data.
   const ready = !signedIn || household !== undefined;
@@ -58,17 +61,15 @@ const Navigation = () => {
   return (
     <>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, animation: "slide_from_right" }}>
+      {/* The JS stack, not the native one, so pushes can run on a spring we tune (SPRING_SCREEN). */}
+      <Stack screenOptions={{ headerShown: false, cardStyle: { backgroundColor: colors.bg }, ...pushTransition({ reduceMotion }) }}>
         <Stack.Protected guard={!signedIn}>
-          <Stack.Screen name="login" options={{ animation: "fade" }} />
+          <Stack.Screen name="login" options={ROOT_FADE} />
         </Stack.Protected>
         <Stack.Protected guard={signedIn}>
-          <Stack.Screen name="index" options={{ animation: "fade" }} />
-          {/* The list's + button morphs into this screen's Add button (FabMorph), so no native animation. */}
-          <Stack.Screen
-            name="add"
-            options={{ presentation: "transparentModal", animation: "none", gestureEnabled: false, contentStyle: { backgroundColor: "transparent" } }}
-          />
+          <Stack.Screen name="index" options={ROOT_FADE} />
+          {/* The list's + button morphs into this screen's Add button (FabMorph), so the stack doesn't animate it. */}
+          <Stack.Screen name="add" options={{ ...NO_TRANSITION, presentation: "transparentModal", cardStyle: { backgroundColor: "transparent" } }} />
           <Stack.Screen name="item/[id]" />
           <Stack.Screen name="settings" />
           <Stack.Screen name="groups/index" />

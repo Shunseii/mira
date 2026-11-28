@@ -20,6 +20,12 @@ export const SPRING_TRAVEL = { mass: 1, stiffness: 750, damping: 52 } as const;
 /** A little bounce (≈ 4% past the target on a 0.6 → 1 scale), settles in about 300 ms. */
 export const SPRING_POP = { mass: 1, stiffness: 520, damping: 26 } as const;
 
+/**
+ * Screen pushes and pops (and a swipe back's release): critically damped, so a pushed screen glides to a stop
+ * with no bounce in about 480 ms. Drives React Navigation's Animated.spring, not Reanimated.
+ */
+export const SPRING_SCREEN = { mass: 1, stiffness: 320, damping: 36 } as const;
+
 /** Rows moving to a new place in a list: checked items sinking, neighbours closing the gap. */
 export const ROW_LAYOUT = LinearTransition.springify().mass(SPRING_SNAPPY.mass).stiffness(SPRING_SNAPPY.stiffness).damping(SPRING_SNAPPY.damping);
 
